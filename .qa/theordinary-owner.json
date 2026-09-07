@@ -1,0 +1,67 @@
+{
+  "label": "theordinary-owner",
+  "domain": "theordinary.com",
+  "status": "complete",
+  "monthlyTraffic": "82K+ (est. from visibility 100/100)",
+  "products": "31",
+  "reviews": "Not found",
+  "quiz": "Not found",
+  "revenueOpportunity": "Unavailable",
+  "growthAssessment": "0 / 100",
+  "analysisSource": "deterministic",
+  "confidence": "low",
+  "solutionFit": null,
+  "scenarios": [
+    {
+      "label": "Conservative",
+      "description": "[ASM] Revenue scenarios: INSUFFICIENT_DATA — missing AOV or category-matched AOV benchmark. BRAIN does not fabricate estimates. Provide the missing data or run deeper research to unlock scenario modelling (see MODEL RULES P4).",
+      "revenueLow": 0,
+      "revenueHigh": 0
+    },
+    {
+      "label": "Base",
+      "description": "[ASM] Revenue scenarios: INSUFFICIENT_DATA — missing AOV or category-matched AOV benchmark. BRAIN does not fabricate estimates. Provide the missing data or run deeper research to unlock scenario modelling (see MODEL RULES P4).",
+      "revenueLow": 0,
+      "revenueHigh": 0
+    },
+    {
+      "label": "Aggressive",
+      "description": "[ASM] Revenue scenarios: INSUFFICIENT_DATA — missing AOV or category-matched AOV benchmark. BRAIN does not fabricate estimates. Provide the missing data or run deeper research to unlock scenario modelling (see MODEL RULES P4).",
+      "revenueLow": 0,
+      "revenueHigh": 0
+    }
+  ],
+  "bottlenecks": [
+    "[OBS] Estimated monthly traffic: 82,000. Compare against relevant acquisition benchmarks once industry is classified.",
+    "[OBS] No review data found — social proof could not be assessed. (Ref: BENCHMARK 084 — measure review count/rating/recency before comparing)",
+    "[OBS] No quiz element found on crawled pages. (Ref: BENCHMARK 070/071 — quiz personalization benchmarks)",
+    "[OBS] Social following unavailable — organic social reach not assessed.",
+    "[ASM] Conversion, AOV, retention and email performance could not be observed from public signals — these require first-party data or deeper research."
+  ],
+  "opportunities": [
+    "[OBS] 31 catalog markers — cross-sell surface exists. (Ref: BENCHMARK 041 — DTC AOV context; bundling/AOV levers per BENCHMARK 095)",
+    "[ASM] No quantitative opportunity sizing possible without conversion/AOV observation — see INSUFFICIENT_DATA conditions in scenarios."
+  ],
+  "summary": "[DRV] Deterministic assessment (Gemini unavailable — no AI interpretation applied). Observed: traffic estimate, 31 catalog markers, no quiz detected. Revenue scenario modelling requires traffic plus an AOV basis; where either is missing the scenarios are marked INSUFFICIENT_DATA rather than estimated. This is a research summary, not a revenue guarantee.",
+  "calculatorCheck": {
+    "calcBaseCombined": null,
+    "calcSufficiency": "INSUFFICIENT_DATA",
+    "calcMissing": [
+      "AOV (observed or verified category benchmark)",
+      "baseline conversion rate",
+      "quiz-to-purchase rate (no verified benchmark exists)"
+    ],
+    "calcPrimary": null,
+    "calcIndustry": "beauty",
+    "calcAovBasis": "INSUFFICIENT_DATA",
+    "geminiBaseRevenue": null,
+    "numbersMatch": true,
+    "DEFECT_IF_FALSE": false
+  },
+  "evidenceTagCounts": {
+    "obs": 5,
+    "bmk": 0,
+    "asm": 5,
+    "drv": 1
+  }
+}

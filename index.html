@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BRAIN Landing</title>
+  <meta name="description" content="Research the business, uncover the problems, assess the opportunities and implement the solutions with BRAIN.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ===== CSS RESET ===== */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ===== CSS VARIABLES ===== */
+    :root {
+      --deep-teal: #23404a;
+      --deep-teal-2: #182f37;
+      --turquoise: #65d6bb;
+      --turquoise-dark: #3fb99d;
+      --ivory: #f7f5ef;
+      --ivory-2: #f1eee6;
+      --stone: #e6e1d7;
+      --ink: #172326;
+      --muted: #727b7c;
+      --white: #ffffff;
+      --line: rgba(35, 64, 74, 0.14);
+      --line-light: rgba(255, 255, 255, 0.16);
+      --font-serif: 'DM Serif Display', Georgia, serif;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* ===== BASE ===== */
+    html {
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      color: var(--ink);
+      background: var(--ivory);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    img { max-width: 100%; display: block; }
+    a { text-decoration: none; color: inherit; }
+    button { border: none; background: none; cursor: pointer; font-family: inherit; }
+    ul { list-style: none; }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ===== TYPOGRAPHY ===== */
+    h1, h2, h3, h4 {
+      font-family: var(--font-serif);
+      font-weight: 400;
+      line-height: 1.15;
+    }
+
+    .section-label {
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--turquoise-dark);
+      margin-bottom: 20px;
+    }
+
+    .section-headline {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      color: var(--deep-teal);
+      margin-bottom: 24px;
+    }
+
+    .section-copy {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 600px;
+      line-height: 1.7;
+    }
+
+    /* ===== NAVIGATION ===== */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(247, 245, 239, 0.85);
+      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--line);
+      padding: 16px 0;
+    }
+
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-logo-mark {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid var(--deep-teal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-serif);
+      font-size: 1.1rem;
+      color: var(--deep-teal);
+      flex-shrink: 0;
+    }
+
+    .nav-logo-text {
+      font-family: var(--font-sans);
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--deep-teal);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+    }
+
+    .nav-links a {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--deep-teal);
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--turquoise-dark);
+    }
+
+    .nav-cta {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--deep-teal);
+      border: 1.5px solid var(--deep-teal);
+      border-radius: 40px;
+      padding: 10px 24px;
+      transition: all 0.25s ease;
+    }
+
+    .nav-cta:hover {
+      background: var(--deep-teal);
+      color: var(--white);
+    }
+
+    @media (max-width: 767px) {
+      .nav-links { display: none; }
+      .nav-cta {
+        font-size: 0.8rem;
+        padding: 8px 18px;
+      }
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      padding: 100px 0 80px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 40px;
+      padding: 10px 24px;
+      margin-bottom: 48px;
+    }
+
+    .hero-badge-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--turquoise);
+      flex-shrink: 0;
+    }
+
+    .hero-badge-text {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--deep-teal);
+    }
+
+    .hero-headline {
+      font-family: var(--font-serif);
+      font-size: clamp(2.2rem, 6.5vw, 5rem);
+      line-height: 1.08;
+      color: var(--deep-teal);
+      margin-bottom: 40px;
+      letter-spacing: -0.01em;
+    }
+
+    .hero-line {
+      display: block;
+    }
+
+    .hero-arrow {
+      display: block;
+      color: var(--turquoise-dark);
+      font-size: 0.75em;
+      line-height: 1;
+      margin: 0.35em 0;
+      text-align: center;
+    }
+
+    .hero-subtitle {
+      font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+      color: var(--muted);
+      max-width: 620px;
+      margin: 0 auto 56px;
+      line-height: 1.7;
+    }
+
+    /* Process Graphic */
+    .hero-process {
+      background: rgba(255, 255, 255, 0.6);
+      -webkit-backdrop-filter: blur(24px);
+      backdrop-filter: blur(24px);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 32px;
+      max-width: 640px;
+      margin: 0 auto 48px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .hero-process-step {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 20px 8px;
+      text-align: center;
+      transition: transform 0.2s ease;
+    }
+
+    .hero-process-step:hover {
+      transform: translateY(-2px);
+    }
+
+    .hero-process-num {
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--turquoise-dark);
+      margin-bottom: 6px;
+    }
+
+    .hero-process-name {
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: var(--deep-teal);
+    }
+
+    .hero-cta {
+      display: inline-block;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--white);
+      background: var(--deep-teal);
+      border-radius: 50px;
+      padding: 16px 40px;
+      transition: all 0.25s ease;
+    }
+
+    .hero-cta:hover {
+      background: var(--deep-teal-2);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(35, 64, 74, 0.2);
+    }
+
+    .hero-support-text {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-top: 16px;
+      margin-bottom: 56px;
+    }
+
+    /* Support Loop */
+    .hero-loop {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 20px 28px;
+      max-width: 700px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .hero-loop-arrow {
+      color: var(--stone);
+      margin: 0 2px;
+    }
+
+    .hero-loop-highlight {
+      color: var(--turquoise-dark);
+      font-weight: 600;
+    }
+
+    @media (max-width: 600px) {
+      .hero { padding: 60px 0 50px; }
+      .hero-process { grid-template-columns: repeat(2, 1fr); padding: 20px; }
+      .hero-loop { font-size: 0.75rem; padding: 16px 18px; }
+    }
+
+    /* ===== WHO SECTION ===== */
+    .who {
+      padding: 100px 0;
+      background: var(--deep-teal);
+      color: var(--white);
+    }
+
+    .who .section-label { color: var(--turquoise); }
+    .who .section-headline { color: var(--white); }
+    .who .section-copy { color: rgba(255, 255, 255, 0.7); }
+
+    .who-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 32px;
+      margin-top: 48px;
+    }
+
+    .who-card {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--line-light);
+      border-radius: 20px;
+      padding: 40px 36px;
+    }
+
+    .who-card-num {
+      font-family: var(--font-serif);
+      font-size: 3.5rem;
+      color: var(--turquoise);
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+
+    .who-card-title {
+      font-family: var(--font-serif);
+      font-size: 1.6rem;
+      color: var(--white);
+      margin-bottom: 16px;
+      line-height: 1.25;
+    }
+
+    .who-card-copy {
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.65);
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+
+    .who-card-bullets li {
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.7);
+      padding: 6px 0;
+      padding-left: 16px;
+      position: relative;
+    }
+
+    .who-card-bullets li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: var(--turquoise);
+    }
+
+    @media (max-width: 767px) {
+      .who { padding: 72px 0; }
+      .who-grid { grid-template-columns: 1fr; }
+      .who-card { padding: 28px 24px; }
+      .who-card-num { font-size: 2.8rem; }
+    }
+
+    /* ===== RESEARCH WORKSPACE ===== */
+    .research {
+      padding: 100px 0;
+    }
+
+    .research .section-headline {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      text-align: center;
+    }
+
+    .research .section-copy {
+      text-align: center;
+      margin: 0 auto 48px;
+    }
+
+    .research .section-label {
+      text-align: center;
+    }
+
+    .spreadsheet-wrap {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      overflow: hidden;
+      max-width: 900px;
+      margin: 0 auto 48px;
+    }
+
+    .spreadsheet-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .spreadsheet-topbar-title {
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--deep-teal);
+    }
+
+    .spreadsheet-topbar-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .spreadsheet-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .spreadsheet {
+      width: 100%;
+      min-width: 700px;
+      border-collapse: collapse;
+    }
+
+    .spreadsheet thead th {
+      font-family: var(--font-sans);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: left;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    .spreadsheet tbody td {
+      font-size: 0.85rem;
+      color: var(--ink);
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    .spreadsheet tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .spreadsheet .td-bold {
+      font-weight: 600;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(101, 214, 187, 0.12);
+      color: var(--turquoise-dark);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    .status-badge-partial {
+      background: rgba(101, 214, 187, 0.08);
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--turquoise);
+    }
+
+    .status-dot-partial {
+      background: var(--muted);
+    }
+
+    .spreadsheet-note {
+      padding: 18px 24px;
+      border-top: 1px solid var(--line);
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .spreadsheet-export {
+      padding: 18px 24px;
+      border-top: 1px solid var(--line);
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--deep-teal);
+    }
+
+    @media (max-width: 767px) {
+      .research { padding: 72px 0; }
+      .spreadsheet-topbar { flex-direction: column; align-items: flex-start; gap: 6px; }
+    }
+
+    /* ===== BENEFITS ===== */
+    .benefits {
+      padding: 80px 0;
+    }
+
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      margin-top: 48px;
+    }
+
+    .benefit-item {
+      text-align: center;
+      padding: 48px 28px;
+      border-top: 1px solid var(--line);
+    }
+
+    .benefit-num {
+      font-family: var(--font-serif);
+      font-size: 3.5rem;
+      color: var(--turquoise-dark);
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+
+    .benefit-title {
+      font-family: var(--font-serif);
+      font-size: 1.3rem;
+      color: var(--deep-teal);
+      margin-bottom: 12px;
+    }
+
+    .benefit-copy {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    @media (max-width: 767px) {
+      .benefits-grid { grid-template-columns: 1fr; }
+      .benefit-item { padding: 36px 20px; }
+    }
+
+    /* ===== $1.50 EXPORT ===== */
+    .export-section {
+      padding: 0 0 100px;
+    }
+
+    .export-card {
+      background: rgba(255, 255, 255, 0.65);
+      -webkit-backdrop-filter: blur(24px);
+      backdrop-filter: blur(24px);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 56px 48px;
+      max-width: 700px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .export-card h3 {
+      font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+      color: var(--deep-teal);
+      margin-bottom: 20px;
+    }
+
+    .export-card p {
+      font-size: 0.95rem;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 36px;
+      max-width: 560px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .export-price {
+      font-family: var(--font-serif);
+      font-size: 3.5rem;
+      color: var(--deep-teal);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .export-price-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    @media (max-width: 767px) {
+      .export-card { padding: 36px 24px; }
+      .export-price { font-size: 2.8rem; }
+    }
+
+    /* ===== INTELLIGENCE STACK ===== */
+    .sources {
+      padding: 100px 0;
+      background: var(--deep-teal);
+      color: var(--white);
+    }
+
+    .sources .section-label { color: var(--turquoise); }
+    .sources .section-headline { color: var(--white); }
+    .sources .section-copy { color: rgba(255, 255, 255, 0.65); }
+
+    .sources-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--line-light);
+      border-radius: 16px;
+      overflow: hidden;
+      margin: 48px 0;
+    }
+
+    .source-item {
+      background: rgba(255, 255, 255, 0.04);
+      padding: 32px 20px;
+      text-align: center;
+      transition: background 0.2s ease;
+    }
+
+    .source-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .source-name {
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--white);
+      margin-bottom: 6px;
+    }
+
+    .source-desc {
+      font-size: 0.78rem;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .sources-disclaimer {
+      text-align: center;
+      font-size: 0.82rem;
+      color: rgba(255, 255, 255, 0.45);
+      line-height: 1.7;
+      max-width: 600px;
+      margin: 0 auto 40px;
+    }
+
+    .sources-cta {
+      display: block;
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--white);
+    }
+
+    .sources-cta:hover {
+      color: var(--turquoise);
+    }
+
+    @media (max-width: 1024px) {
+      .sources-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 767px) {
+      .sources { padding: 72px 0; }
+      .sources-grid { grid-template-columns: repeat(2, 1fr); }
+      .source-item { padding: 24px 14px; }
+    }
+
+    /* ===== ANALYSIS LAYER ===== */
+    .analysis {
+      padding: 100px 0;
+    }
+
+    .analysis .section-label,
+    .analysis .section-headline,
+    .analysis .section-copy {
+      text-align: center;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .analysis-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      margin-top: 56px;
+    }
+
+    .analysis-item {
+      text-align: center;
+      padding: 48px 28px;
+      border-top: 1px solid var(--line);
+    }
+
+    .analysis-num {
+      font-family: var(--font-serif);
+      font-size: 3.5rem;
+      color: var(--turquoise-dark);
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+
+    .analysis-title {
+      font-family: var(--font-serif);
+      font-size: 1.3rem;
+      color: var(--deep-teal);
+      margin-bottom: 12px;
+    }
+
+    .analysis-copy {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    @media (max-width: 767px) {
+      .analysis { padding: 72px 0; }
+      .analysis-grid { grid-template-columns: 1fr; }
+      .analysis-item { padding: 36px 20px; }
+    }
+
+    /* ===== USER EVIDENCE ===== */
+    .evidence {
+      padding: 100px 0;
+      background: var(--ivory-2);
+    }
+
+    .evidence .section-label,
+    .evidence .section-headline,
+    .evidence .section-copy {
+      text-align: center;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .evidence-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 48px;
+    }
+
+    .evidence-card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 32px 28px;
+      display: flex;
+      flex-direction: column;
+      min-height: 220px;
+    }
+
+    .evidence-card-quote {
+      font-family: var(--font-serif);
+      font-size: 1.15rem;
+      color: var(--deep-teal);
+      line-height: 1.45;
+      margin-bottom: auto;
+      padding-bottom: 24px;
+    }
+
+    .evidence-card-status {
+      font-size: 0.75rem;
+      color: var(--muted);
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+    }
+
+    @media (max-width: 767px) {
+      .evidence { padding: 72px 0; }
+      .evidence-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ===== CREATOR / ABOUT ===== */
+    .about {
+      padding: 100px 0;
+    }
+
+    .about .section-label,
+    .about .section-headline {
+      text-align: center;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .about-card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 48px 40px;
+      max-width: 680px;
+      margin: 48px auto 0;
+      text-align: center;
+    }
+
+    .about-card-heading {
+      font-family: var(--font-serif);
+      font-size: 1.8rem;
+      color: var(--deep-teal);
+      margin-bottom: 28px;
+    }
+
+    .about-card p {
+      font-size: 0.95rem;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .about-card-footer {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--deep-teal);
+      margin-top: 28px;
+    }
+
+    @media (max-width: 767px) {
+      .about { padding: 72px 0; }
+      .about-card { padding: 32px 24px; }
+    }
+
+    /* ===== ROADMAP ===== */
+    .roadmap {
+      padding: 100px 0;
+      background: var(--ivory-2);
+    }
+
+    .roadmap .section-label,
+    .roadmap .section-headline,
+    .roadmap .section-copy {
+      text-align: center;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .roadmap-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-top: 48px;
+    }
+
+    .roadmap-card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 28px 24px;
+    }
+
+    .roadmap-card-status {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+
+    .roadmap-card-status.completed {
+      background: rgba(101, 214, 187, 0.15);
+      color: var(--turquoise-dark);
+    }
+
+    .roadmap-card-status.planned {
+      background: var(--ivory-2);
+      color: var(--muted);
+    }
+
+    .roadmap-card-num {
+      font-family: var(--font-serif);
+      font-size: 2.8rem;
+      color: var(--turquoise-dark);
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+
+    .roadmap-card-title {
+      font-family: var(--font-serif);
+      font-size: 1.15rem;
+      color: var(--deep-teal);
+      margin-bottom: 10px;
+    }
+
+    .roadmap-card-desc {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1024px) {
+      .roadmap-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 767px) {
+      .roadmap { padding: 72px 0; }
+      .roadmap-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      background: var(--deep-teal);
+      color: var(--white);
+      padding: 72px 0 40px;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 48px;
+    }
+
+    .footer-brand-name {
+      font-family: var(--font-serif);
+      font-size: 2rem;
+      color: var(--white);
+      margin-bottom: 16px;
+    }
+
+    .footer-brand-desc {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.55);
+      line-height: 1.7;
+      max-width: 320px;
+    }
+
+    .footer-col-title {
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 20px;
+    }
+
+    .footer-col ul li {
+      margin-bottom: 10px;
+    }
+
+    .footer-col ul li a {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.55);
+      transition: color 0.2s ease;
+    }
+
+    .footer-col ul li a:hover {
+      color: var(--turquoise);
+    }
+
+    .footer-bottom {
+      border-top: 1px solid var(--line-light);
+      padding-top: 28px;
+    }
+
+    .footer-copyright {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      margin-bottom: 10px;
+    }
+
+    .footer-tagline {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.35);
+    }
+
+    @media (max-width: 767px) {
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .footer { padding: 48px 0 32px; }
+    }
+
+    @media (max-width: 480px) {
+      .footer-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ===== DISCLAIMER ===== */
+    .disclaimer {
+      padding: 40px 0;
+      background: var(--ivory-2);
+      border-top: 1px solid var(--line);
+    }
+
+    .disclaimer p {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    /* ===== REDUCED MOTION ===== */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== NAVIGATION ===== -->
+  <header class="nav" role="banner">
+    <nav class="nav-inner" aria-label="Main navigation">
+      <a href="#" class="nav-logo" aria-label="BRAIN home">
+        <span class="nav-logo-mark" aria-hidden="true">B</span>
+        <span class="nav-logo-text">BRAIN</span>
+      </a>
+      <div class="nav-links">
+        <a href="#who">Who It's For</a>
+        <a href="#research">Research</a>
+        <a href="#sources">Sources</a>
+        <a href="#about">About</a>
+        <a href="#roadmap">Roadmap</a>
+      </div>
+      <a href="#research" class="nav-cta">Use BRAIN</a>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- ===== HERO ===== -->
+    <section class="hero" aria-label="Hero">
+      <div class="container">
+        <div class="hero-badge">
+          <span class="hero-badge-dot" aria-hidden="true"></span>
+          <span class="hero-badge-text">Business Revenue Assessment &amp; Intelligence Node</span>
+        </div>
+
+        <h1 class="hero-headline">
+          <span class="hero-line">
+            RESEARCH THE BUSINESS
+            <span class="hero-arrow">&#8681;</span>
+          </span>
+          <span class="hero-line">
+            UNCOVER THE PROBLEMS
+            <span class="hero-arrow">&#8681;</span>
+          </span>
+          <span class="hero-line">
+            ASSESS THE OPPORTUNITIES
+            <span class="hero-arrow">&#8681;</span>
+          </span>
+          <span class="hero-line">
+            IMPLEMENT THE SOLUTIONS
+          </span>
+        </h1>
+
+        <p class="hero-subtitle">
+          Powered by real-world case studies, industry benchmarks, and structured business intelligence. Everything you need to turn research into action.
+        </p>
+
+        <div class="hero-process" aria-label="Research process">
+          <div class="hero-process-step">
+            <div class="hero-process-num">01</div>
+            <div class="hero-process-name">RESEARCH</div>
+          </div>
+          <div class="hero-process-step">
+            <div class="hero-process-num">02</div>
+            <div class="hero-process-name">DIAGNOSE</div>
+          </div>
+          <div class="hero-process-step">
+            <div class="hero-process-num">03</div>
+            <div class="hero-process-name">ASSESS</div>
+          </div>
+          <div class="hero-process-step">
+            <div class="hero-process-num">04</div>
+            <div class="hero-process-name">IMPLEMENT</div>
+          </div>
+        </div>
+
+        <a href="#research" class="hero-cta">Start Business Research</a>
+        <p class="hero-support-text">Research up to 10 businesses in one session.</p>
+
+        <div class="hero-loop" aria-label="Support loop">
+          <span>More support</span>
+          <span class="hero-loop-arrow" aria-hidden="true">→</span>
+          <span>Better infrastructure</span>
+          <span class="hero-loop-arrow" aria-hidden="true">→</span>
+          <span>Higher limits</span>
+          <span class="hero-loop-arrow" aria-hidden="true">→</span>
+          <span>Better research</span>
+          <span class="hero-loop-arrow" aria-hidden="true">→</span>
+          <span class="hero-loop-highlight">Results you can TRUST</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== WHO BRAIN IS FOR ===== -->
+    <section id="who" class="who" aria-label="Who BRAIN is for">
+      <div class="container">
+        <div class="section-label">Built for two sides of the same problem</div>
+        <h2 class="section-headline">Research the business from a perspective its own dashboard may never show.</h2>
+        <p class="section-copy">BRAIN is designed for people who need to understand a business before deciding what should happen next.</p>
+
+        <div class="who-grid">
+          <article class="who-card">
+            <div class="who-card-num">01</div>
+            <h3 class="who-card-title">Business Owners &amp; Operators</h3>
+            <p class="who-card-copy">Get an external, structured view of your e-commerce business before investing in a new strategy, system, agency, tool or growth initiative.</p>
+            <ul class="who-card-bullets">
+              <li>Identify potential bottlenecks and growth gaps.</li>
+              <li>Benchmark the business against relevant signals.</li>
+              <li>Understand potential upside, downside and risk.</li>
+              <li>Evaluate proposed strategies before implementation.</li>
+            </ul>
+          </article>
+
+          <article class="who-card">
+            <div class="who-card-num">02</div>
+            <h3 class="who-card-title">Freelancers, Agencies &amp; Lead Generators</h3>
+            <p class="who-card-copy">Research prospective businesses before pitching a service, product, system or strategy — turning generic outreach into evidence-backed opportunity identification.</p>
+            <ul class="who-card-bullets">
+              <li>Research multiple prospects in one workflow.</li>
+              <li>Find business-specific problems worth investigating.</li>
+              <li>Assess whether your proposed solution fits the evidence.</li>
+              <li>Build stronger discovery calls and proposals.</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== RESEARCH WORKSPACE ===== -->
+    <section id="research" class="research" aria-label="Research workspace">
+      <div class="container">
+        <div class="section-label">Research Workspace</div>
+        <h2 class="section-headline">One structured view of the business.</h2>
+        <p class="section-copy">BRAIN collects available signals from multiple sources and organizes them into a research-ready business intelligence workspace.</p>
+
+        <div class="spreadsheet-wrap">
+          <div class="spreadsheet-topbar">
+            <span class="spreadsheet-topbar-title">Business Research — Preview</span>
+            <span class="spreadsheet-topbar-meta">8 displayed fields · Sample output</span>
+          </div>
+          <div class="spreadsheet-scroll">
+            <table class="spreadsheet" role="table">
+              <thead>
+                <tr>
+                  <th scope="col">Business</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Monthly Traffic</th>
+                  <th scope="col">Products</th>
+                  <th scope="col">Reviews</th>
+                  <th scope="col">Quiz</th>
+                  <th scope="col">Revenue Opportunity</th>
+                  <th scope="col">Growth Assessment</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="td-bold">Example Brand</td>
+                  <td><span class="status-badge"><span class="status-dot"></span> Complete</span></td>
+                  <td>48K+</td>
+                  <td>36</td>
+                  <td>2,840</td>
+                  <td>Present</td>
+                  <td>$18K – $42K</td>
+                  <td>74 / 100</td>
+                </tr>
+                <tr>
+                  <td class="td-bold">Example Store</td>
+                  <td><span class="status-badge"><span class="status-dot"></span> Complete</span></td>
+                  <td>31K+</td>
+                  <td>21</td>
+                  <td>1,190</td>
+                  <td>Not found</td>
+                  <td>$9K – $24K</td>
+                  <td>61 / 100</td>
+                </tr>
+                <tr>
+                  <td class="td-bold">Another Brand</td>
+                  <td><span class="status-badge status-badge-partial"><span class="status-dot status-dot-partial"></span> Partial</span></td>
+                  <td>19K+</td>
+                  <td>14</td>
+                  <td>740</td>
+                  <td>Present</td>
+                  <td>$6K – $16K</td>
+                  <td>55 / 100</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="spreadsheet-note">
+            Free research remains useful on its own. Selected high-value analysis fields can be previewed in the workspace, while the complete structured research dataset can be exported when unlocked.
+          </div>
+          <div class="spreadsheet-export">
+            Clean structured export — $1.50
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== BENEFITS ===== -->
+    <section class="benefits" aria-label="Benefits">
+      <div class="container">
+        <div class="benefits-grid">
+          <div class="benefit-item">
+            <div class="benefit-num">01</div>
+            <h3 class="benefit-title">Research Faster</h3>
+            <p class="benefit-copy">Replace scattered manual research with structured business intelligence gathered across multiple sources.</p>
+          </div>
+          <div class="benefit-item">
+            <div class="benefit-num">02</div>
+            <h3 class="benefit-title">Find the Gaps</h3>
+            <p class="benefit-copy">Surface potential acquisition, conversion, retention, operational and strategic bottlenecks.</p>
+          </div>
+          <div class="benefit-item">
+            <div class="benefit-num">03</div>
+            <h3 class="benefit-title">Assess Before Acting</h3>
+            <p class="benefit-copy">Compare conservative, base and aggressive outcomes, including potential risks, failures and upside.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== $1.50 EXPORT ===== -->
+    <section class="export-section" aria-label="Structured export">
+      <div class="container">
+        <div class="export-card">
+          <h3>Help build the infrastructure you use.</h3>
+          <p>Research can be viewed for free. The $1.50 structured export helps fund better research infrastructure, higher usage limits, stronger data sources and ongoing maintenance — so BRAIN can continue becoming more useful for everyone using it.</p>
+          <div class="export-price">$1.50</div>
+          <div class="export-price-label">One-time export</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== INTELLIGENCE STACK ===== -->
+    <section id="sources" class="sources" aria-label="Intelligence stack">
+      <div class="container">
+        <div class="section-label">Intelligence Stack</div>
+        <h2 class="section-headline">Multiple sources. One structured view.</h2>
+        <p class="section-copy">BRAIN combines publicly available business, website, traffic, social, company and advertising signals before the analysis layer evaluates what those signals may mean.</p>
+
+        <div class="sources-grid">
+          <div class="source-item">
+            <div class="source-name">Firecrawl</div>
+            <div class="source-desc">Website Intelligence</div>
+          </div>
+          <div class="source-item">
+            <div class="source-name">Apify</div>
+            <div class="source-desc">Social Intelligence</div>
+          </div>
+          <div class="source-item">
+            <div class="source-name">Apollo</div>
+            <div class="source-desc">Company Intelligence</div>
+          </div>
+          <div class="source-item">
+            <div class="source-name">Semrush</div>
+            <div class="source-desc">Traffic &amp; Search Signals</div>
+          </div>
+          <div class="source-item">
+            <div class="source-name">Meta Ad Library</div>
+            <div class="source-desc">Advertising Signals</div>
+          </div>
+          <div class="source-item">
+            <div class="source-name">Industry Benchmarks</div>
+            <div class="source-desc">Performance Context</div>
+          </div>
+          <div class="source-item">
+            <div class="source-name">Real-World Case Studies</div>
+            <div class="source-desc">Strategy Evidence</div>
+          </div>
+          <div class="source-item">
+            <div class="source-name">ACR Framework</div>
+            <div class="source-desc">Acquisition · Conversion · Retention</div>
+          </div>
+        </div>
+
+        <p class="sources-disclaimer">Source availability varies by business and research session. Available data is classified by its evidence type and source. Missing information is not silently fabricated.</p>
+
+        <a href="#research" class="sources-cta">Research a Business</a>
+      </div>
+    </section>
+
+    <!-- ===== ANALYSIS LAYER ===== -->
+    <section class="analysis" aria-label="Analysis layer">
+      <div class="container">
+        <div class="section-label">The Analysis Layer</div>
+        <h2 class="section-headline">Not just data collection. Contextual assessment.</h2>
+        <p class="section-copy">BRAIN is designed to cross-reference observed business signals against relevant benchmarks and real-world evidence before assessing the potential impact of a proposed solution.</p>
+
+        <div class="analysis-grid">
+          <div class="analysis-item">
+            <div class="analysis-num">01</div>
+            <h3 class="analysis-title">Conservative</h3>
+            <p class="analysis-copy">The lowest plausible outcome based on the available evidence, assumptions and identified constraints.</p>
+          </div>
+          <div class="analysis-item">
+            <div class="analysis-num">02</div>
+            <h3 class="analysis-title">Base</h3>
+            <p class="analysis-copy">The central scenario representing a reasonable outcome when the proposed strategy performs as expected.</p>
+          </div>
+          <div class="analysis-item">
+            <div class="analysis-num">03</div>
+            <h3 class="analysis-title">Aggressive</h3>
+            <p class="analysis-copy">The highest potential scenario supported by relevant evidence, without presenting the result as a guarantee.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== USER EVIDENCE ===== -->
+    <section class="evidence" aria-label="User evidence">
+      <div class="container">
+        <div class="section-label">User Evidence</div>
+        <h2 class="section-headline">Let the users write this section.</h2>
+        <p class="section-copy">BRAIN will never manufacture testimonials. Real feedback from business owners, consultants, agencies and researchers will appear here as the product is used.</p>
+
+        <div class="evidence-grid">
+          <article class="evidence-card">
+            <p class="evidence-card-quote">Reviews will appear here after real users begin using BRAIN.</p>
+            <div class="evidence-card-status">Awaiting verified user feedback</div>
+          </article>
+          <article class="evidence-card">
+            <p class="evidence-card-quote">Real results. Real research. No manufactured testimonials.</p>
+            <div class="evidence-card-status">Awaiting verified user feedback</div>
+          </article>
+          <article class="evidence-card">
+            <p class="evidence-card-quote">The strongest proof will come from what people do with the intelligence BRAIN produces.</p>
+            <div class="evidence-card-status">Awaiting verified user feedback</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CREATOR / ABOUT ===== -->
+    <section id="about" class="about" aria-label="About BRAIN">
+      <div class="container">
+        <div class="section-label">The People Behind BRAIN</div>
+        <h2 class="section-headline">Built by a strategist. Accelerated by AI.</h2>
+
+        <div class="about-card">
+          <div class="about-card-heading">MK × AI</div>
+          <p>BRAIN was created by MK as a practical business intelligence system for researching businesses, identifying bottlenecks, evaluating opportunities and connecting research to action.</p>
+          <p>The system combines strategic thinking, business research, automation, structured data and AI-assisted analysis. The goal is simple: make high-quality business research more accessible, more structured and more actionable.</p>
+          <div class="about-card-footer">Human Strategy · AI-Assisted Development · Continuous Iteration</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ROADMAP ===== -->
+    <section id="roadmap" class="roadmap" aria-label="Roadmap">
+      <div class="container">
+        <div class="section-label">The Roadmap</div>
+        <h2 class="section-headline">From research tool to business intelligence infrastructure.</h2>
+        <p class="section-copy">BRAIN is being developed in stages. Each phase expands what the system can research, assess and eventually connect to.</p>
+
+        <div class="roadmap-grid">
+          <article class="roadmap-card">
+            <span class="roadmap-card-status completed">Completed</span>
+            <div class="roadmap-card-num">01</div>
+            <h3 class="roadmap-card-title">Research Engine</h3>
+            <p class="roadmap-card-desc">Multi-business research, structured intelligence, source classification, research workspace and exportable data.</p>
+          </article>
+          <article class="roadmap-card">
+            <span class="roadmap-card-status planned">Planned</span>
+            <div class="roadmap-card-num">02</div>
+            <h3 class="roadmap-card-title">Automated Intelligence</h3>
+            <p class="roadmap-card-desc">Deeper automated research, broader data coverage, stronger normalization and more efficient research workflows.</p>
+          </article>
+          <article class="roadmap-card">
+            <span class="roadmap-card-status planned">Planned</span>
+            <div class="roadmap-card-num">03</div>
+            <h3 class="roadmap-card-title">Opportunity Analysis</h3>
+            <p class="roadmap-card-desc">Benchmark-driven opportunity assessment, scenario modelling, risk analysis and structured strategic recommendations.</p>
+          </article>
+          <article class="roadmap-card">
+            <span class="roadmap-card-status planned">Planned</span>
+            <div class="roadmap-card-num">04</div>
+            <h3 class="roadmap-card-title">Intelligence Infrastructure</h3>
+            <p class="roadmap-card-desc">Expanded integrations, advanced workflows, MCP connectivity and a broader intelligence infrastructure built around BRAIN.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== DISCLAIMER ===== -->
+    <section class="disclaimer" aria-label="Disclaimer">
+      <div class="container">
+        <p>BRAIN is a pre-implementation research and opportunity-assessment tool. Results may be based on publicly available information, industry benchmarks, observed signals and explicitly identified assumptions. They are estimates and are not guarantees of revenue, ROI or business performance. Brand-specific financial analysis requires first-party business data.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-brand-name">BRAIN</div>
+          <p class="footer-brand-desc">Business Revenue Assessment &amp; Intelligence Node. A business research and opportunity assessment system designed to turn scattered information into structured intelligence and action.</p>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Resources</div>
+          <ul>
+            <li><a href="#research">Research Tools</a></li>
+            <li><a href="#sources">ACR Framework</a></li>
+            <li><a href="#">Case Studies</a></li>
+            <li><a href="#sources">Benchmarks</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Connect</div>
+          <ul>
+            <li><a href="#">Contact</a></li>
+            <li><a href="#">LinkedIn</a></li>
+            <li><a href="#">X</a></li>
+            <li><a href="#">Instagram</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">BRAIN</div>
+          <ul>
+            <li><a href="#research">Research Tool</a></li>
+            <li><a href="#sources">Data Sources</a></li>
+            <li><a href="#roadmap">Roadmap</a></li>
+            <li><a href="#">Privacy</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p class="footer-copyright">&copy; 2026 BRAIN. All rights reserved.</p>
+        <p class="footer-tagline">Research → Diagnose → Assess → Implement</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===== MINIMAL JS: MOBILE NAV TOGGLE ===== -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Smooth scroll for anchor links (fallback for older browsers)
+      document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+        anchor.addEventListener('click', function(e) {
+          var target = document.querySelector(this.getAttribute('href'));
+          if (target) {
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      });
+    });
+  </script>
+
+</body>
+</html>

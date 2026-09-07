@@ -1,0 +1,757 @@
+============================================================
+BRAIN BENCHMARK DIRECTORY
+Business Revenue Assessment & Intelligence Node
+Benchmark & Reference Library — Phase 1 / Phase 2 Foundation
+============================================================
+
+DOCUMENT PURPOSE
+----------------
+This is the reference library for BRAIN's benchmark-based analysis.
+
+BRAIN should use these benchmarks to:
+
+1. Compare observed business performance against relevant market benchmarks.
+2. Identify Acquisition, Conversion, and Retention gaps.
+3. Estimate directional opportunity where sufficient data exists.
+4. Classify infrastructure and customer-experience gaps.
+5. Provide evidence-backed recommendations.
+6. Calculate conservative/base/upside scenarios only when the underlying inputs are sufficiently reliable.
+
+IMPORTANT METHODOLOGY RULE
+--------------------------
+A benchmark is NOT proof that a business can achieve the benchmark. Benchmarks are diagnostic reference points.
+
+BRAIN must distinguish:
+[OBS] = Observed directly from the business
+[BMK] = External benchmark
+[ASM] = Explicit assumption
+[DRV] = Derived/calculated value
+
+Revenue estimates must NEVER be presented as guaranteed revenue.
+Use language such as: "Estimated incremental revenue opportunity", "Benchmark-based opportunity", "Directional opportunity", "Pre-implementation estimate", "Potential revenue headroom"
+Do NOT use: "Guaranteed revenue", "Expected guaranteed increase", "You will make $X", "This automation will generate $X"
+
+============================================================
+SECTION 1 — CORE ECOMMERCE CONVERSION BENCHMARKS
+============================================================
+
+BENCHMARK 001 — Ecommerce Conversion Rate
+Metric: Percentage of sessions resulting in an ecommerce transaction
+Formula: Transactions / Sessions x 100
+Current reference points:
+  Global ecommerce: ~2.66%
+  Shopify: ~1.40%
+  Triple Whale paid-ad median: ~1.69%
+  Top 20%: ~3.20%+
+  Top 10%: ~4.70%+
+Source: Triple Whale — Ecommerce Benchmarks 2026
+Dataset: August 2025 – July 2026, 53,000+ ecommerce brands
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+Caution: Do NOT compare against global average without considering industry, traffic source, device, geography, product price, purchase intent, business model.
+
+BENCHMARK 002 — Beauty & Personal Care Conversion Rate
+Dynamic Yield reports Beauty & Personal Care among strongest-converting categories.
+12-month average: ~5.39%
+Global ecommerce average: ~2.72%
+Source: Dynamic Yield XP² Ecommerce Benchmarks
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+Caution: Dynamic Yield dataset/methodology differs from Shopify, Triple Whale, IRP. Do not merge into one "official" benchmark.
+
+BENCHMARK 003 — Global Ecommerce Conversion Rate (Dynamic Yield)
+Dynamic Yield current global reference: ~2.72%
+Source: Dynamic Yield
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+
+BENCHMARK 004 — Ecommerce Conversion Rate by Device
+Triple Whale 2026:
+  Desktop: ~1.90%
+  Mobile: ~1.20%
+  Mobile share of traffic: ~73%
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+Use: Mobile conversion headroom identification. Caution: Do not apply without knowing the business's traffic mix and device distribution.
+
+BENCHMARK 005 — Add-to-Cart Rate
+Triple Whale 2026 average: ~5.98%
+Typical range: ~4% – 7%
+Food & Beverage: ~9.65% – 13.14%
+Apparel: ~6.33% – 7.12%
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+Use: Product-page / offer effectiveness diagnostic.
+Potential interpretations of low ATC: weak product positioning, weak imagery, unclear value proposition, price resistance, poor product-market fit, poor traffic quality, UX friction.
+Do NOT automatically classify low ATC as conversion problem without examining traffic quality.
+
+============================================================
+SECTION 2 — CART & CHECKOUT BENCHMARKS
+============================================================
+
+BENCHMARK 006 — Cart Abandonment Rate (Baymard)
+Current Baymard average: 70.19%
+~70% of shopping carts are abandoned.
+Source: Baymard Institute — Cart & Checkout Usability Research
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK] | Priority: VERY HIGH
+
+BENCHMARK 007 — Cart Abandonment Rate (Triple Whale)
+Triple Whale 2026: ~70.22%
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+Use: Independent corroborating benchmark for Baymard.
+
+BENCHMARK 008 — Beauty Cart Abandonment
+Triple Whale 2026: ~81.71%
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+Importance: HIGH for skincare/beauty prospects.
+Caution: Do not calculate lost revenue simply as traffic x abandonment rate x AOV — that overstates recoverable demand. A large proportion of abandoned carts represents normal shopping behavior.
+
+BENCHMARK 009 — Mobile Cart Abandonment
+Triple Whale 2026:
+  Mobile: ~73% – 75%
+  Desktop: ~65% – 68%
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+Use: Mobile UX diagnosis.
+
+BENCHMARK 010 — "Just Browsing / Not Ready to Buy"
+Baymard: ~42% of US online shoppers reported abandoning a cart in the last 3 months because they were just browsing / not ready to buy.
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+Importance: CRITICAL METHODOLOGICAL GUARDRAIL — prevents BRAIN from assuming every abandoned cart is recoverable revenue.
+
+BENCHMARK 011 — Average Checkout Length
+Baymard 2024: ~5.1 checkout steps
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+Caution: Number of steps alone does not determine checkout quality.
+
+BENCHMARK 012 — Average Checkout Form Elements
+Baymard: ~19.9 form elements. Optimized checkout: as low as ~12 elements.
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+
+BENCHMARK 013 — Potential Checkout Conversion Improvement
+Baymard usability testing indicates average large ecommerce site may potentially improve conversion by ~35% through checkout UX improvements.
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+IMPORTANT: NOT a universal expected lift. Do NOT say "Your store can increase conversion 35%." Correct: "Baymard's usability research indicates substantial conversion headroom can exist from checkout improvements."
+
+BENCHMARK 014 — Checkout UX Quality
+Baymard: ~65% of ecommerce sites have "mediocre" or worse checkout UX. ~35% decent or better. ~2% good.
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+
+============================================================
+SECTION 3 — RETENTION / REPEAT PURCHASE
+============================================================
+
+BENCHMARK 015 — Average Ecommerce Repeat Customer Rate
+Shopify reference: ~28.2%
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+Caution: Varies substantially by product type, purchase cycle, consumability, subscription model, price, customer acquisition strategy.
+
+BENCHMARK 016 — Repeat Purchase Rate (CBD)
+Shopify cited: ~36.2%. Useful for consumable/replenishable products. Do not use for generic ecommerce.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 017 — Repeat Purchase Rate (Consumable Products)
+Shopify cites meal delivery and supplements: ~29%. Useful for skincare (consumable/replenishable characteristics). Caution: Do not directly equate skincare with supplements or meal delivery.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 018 — Tea Repeat Purchase Rate
+Shopify: ~20.9%. Illustrates product-category variation. Not suitable as skincare benchmark.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 019 — Purchase Frequency
+Smile.io: CPG ~13.95% YoY increase. Recreation ~8.68% YoY increase.
+Source: Smile.io — State of Customer Loyalty in Commerce 2025
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 020 — Customer Lifetime Value
+Smile.io 2025 report: 100,000+ merchants, 148 countries, 585 million orders. Metrics: repeat customer rate, AOV, purchase frequency, CLV, loyalty-generated value.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 021 — Loyalty-Generated Value
+Smile.io: Brands processing 500–5,000 monthly orders: ~23.93% YoY increase in loyalty-generated value.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+============================================================
+SECTION 4 — EMAIL MARKETING BENCHMARKS
+============================================================
+
+BENCHMARK 022 — Email Open Rate
+Klaviyo 2026: 183,000+ customers. Industry-specific benchmarks available.
+BRAIN Dimension: RETENTION / CONVERSION | Evidence Type: [BMK]
+IMPORTANT: Prefer industry-specific Klaviyo benchmark over universal open rate.
+
+BENCHMARK 023 — Retail Email Open Rate
+HubSpot 2025 compilation: ~38.58%. Source within: Klaviyo.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+Caution: Secondary compilation. Prefer Klaviyo's original dataset.
+
+BENCHMARK 024 — Email CTR
+Klaviyo: Industry-specific benchmarks for 183,000+ customers.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 025 — Email Revenue Per Recipient
+Klaviyo: Industry-specific benchmark. Priority: HIGH.
+Much more commercially useful than open rate alone. Revenue per recipient is preferable to open rate when evaluating lifecycle revenue contribution.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 026 — Email Order Rate
+Klaviyo: Industry-specific benchmark. Connects email activity to actual orders.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 027 — Email Campaign Conversion Rate
+Omnisend 2026: ~0.08%. Dataset: 20B+ campaign emails, 27,000+ brands.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 028 — Automated Email Conversion Rate
+Omnisend 2026: ~1.49%. Campaign: ~0.08%. Automation: ~1.49%. Approx difference: ~19x higher conversion for automation.
+Priority: VERY HIGH. Strong evidence for lifecycle automation opportunity.
+IMPORTANT: Do not interpret the 19x difference as causal proof that implementing automation will multiply a specific store's conversion 19x.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 029 — Email Revenue Per Send
+Omnisend 2026: Campaign ~$0.155/email. Automation ~$3.41/email. Approx difference: ~22x.
+Priority: VERY HIGH. Lifecycle automation opportunity.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 030 — Automated Email Revenue Contribution
+Omnisend 2025: Automated emails generated ~37% of sales from ~2% of email volume.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 031 — Automated Email Order Concentration
+Omnisend: Abandoned cart, welcome, and browse-abandonment emails = ~87% of automated orders.
+Priority: HIGH.
+Potential BRAIN recommendation hierarchy: 1. Welcome 2. Cart abandonment 3. Browse abandonment 4. Post-purchase 5. Replenishment 6. Winback
+BRAIN Dimension: RETENTION / CONVERSION | Evidence Type: [BMK]
+
+============================================================
+SECTION 5 — SMS BENCHMARKS
+============================================================
+
+BENCHMARK 032 — SMS Campaign CTR
+Omnisend 2026: ~12.39%. Dataset: 246M+ SMS campaign sends, 27,000+ brands.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 033 — SMS Campaign Conversion Rate
+Omnisend: ~0.12%
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 034 — SMS Campaign Deliverability
+Omnisend: ~96.6%
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 035 — Automated SMS CTR
+Omnisend: ~20.32%
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 036 — Automated SMS Conversion Rate
+Omnisend: Automated SMS ~0.77%. Campaign SMS ~0.12%.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 037 — SMS Click-to-Conversion Rate
+Global campaign: ~0.97%. Automated SMS: ~3.81%. UK campaign: ~5.1%.
+Caution: Country-specific benchmark only for relevant geography.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 038 — SMS Revenue Per Send
+Campaign: ~$0.15. Automated SMS: ~$0.74.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+============================================================
+SECTION 6 — AOV BENCHMARKS
+============================================================
+
+BENCHMARK 039 — Global Ecommerce AOV
+Shopify 2026: ~$130 globally. Caution: Not appropriate for skincare-specific model.
+BRAIN Dimension: CONVERSION / RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 040 — Global AOV (Shopify Guide)
+Shopify AOV guide: ~$145 across industries. Different Shopify sources may report different estimates. Store source/date alongside benchmark.
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+
+BENCHMARK 041 — Triple Whale Paid-Channel Median AOV
+2026: ~$61.22. Dataset: August 2025 – July 2026.
+Priority: HIGH for DTC. Better reference for DTC brands than $130–$145 global AOV.
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+
+BENCHMARKS 043–048 — Industry AOV (Triple Whale)
+  Apparel: ~$89.17
+  Electronics: ~$113.41
+  Food & Beverage: ~$63.32
+  Home & Garden: ~$114.43
+  Automotive: ~$116.34
+  Travel Accessories & Luggage: ~$130.91
+Source: Triple Whale — Ecommerce Benchmarks 2026
+
+============================================================
+SECTION 7 — PAID ACQUISITION BENCHMARKS
+============================================================
+
+BENCHMARK 049 — Paid Advertising CTR
+Triple Whale 2026: ~1.93%. Dataset: 53,000+ brands, Aug 2025 – Jul 2026.
+BRAIN Dimension: ACQUISITION | Evidence Type: [BMK]
+
+BENCHMARK 050 — Paid Advertising Conversion Rate
+Triple Whale: ~1.69%
+BRAIN Dimension: ACQUISITION / CONVERSION | Evidence Type: [BMK]
+
+BENCHMARK 051 — Paid Advertising CPA
+Triple Whale: ~$23.20. Caution: Varies enormously by vertical and product economics.
+BRAIN Dimension: ACQUISITION | Evidence Type: [BMK]
+
+BENCHMARK 052 — Paid Advertising ROAS (Triple Whale Industry Medians)
+  Automotive: 3.27
+  Sports & Outdoors: 3.01
+  Travel Accessories: 2.80
+  Home & Garden: 2.72
+  Baby: 2.71
+  Apparel: 2.70
+  Toys / Art / Collectibles: 2.31
+  Lifestyle & Boutique: 2.31
+  Electronics: 2.28
+  Food & Beverage: 2.03
+BRAIN Dimension: ACQUISITION | Evidence Type: [BMK]
+
+BENCHMARK 053 — Google Ads CTR
+WordStream 2025 overall: ~6.66%. Beauty & Personal Care: ~5.71%.
+BRAIN Dimension: ACQUISITION | Evidence Type: [BMK]
+
+BENCHMARK 054 — Google Ads CPL (Beauty & Personal Care)
+WordStream 2025: ~$60.34. IMPORTANT: Lead-generation benchmark, NOT ecommerce purchase CPA.
+BRAIN Dimension: ACQUISITION | Evidence Type: [BMK]
+
+BENCHMARK 055 — Google Ads CTR (Apparel/Fashion/Jewelry)
+WordStream 2025: ~6.77%
+BRAIN Dimension: ACQUISITION | Evidence Type: [BMK]
+
+============================================================
+SECTION 8 — DIGITAL EXPERIENCE / WEBSITE BEHAVIOR
+============================================================
+
+BENCHMARK 056 — Session Depth / Conversion Relationship
+Contentsquare 2025: +10% session depth → avg ~5.4% increase in conversions. Dataset: ~90B sessions, ~389B page views, ~6,000 websites.
+Caution: Observed relationship, NOT proof that increasing session depth causes conversion increase.
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+
+BENCHMARK 057 — Global Digital Conversion Change
+Contentsquare 2025: ~6.1% decrease in conversions YoY. Use as market context only, not for individual business revenue estimates.
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+
+BENCHMARK 058 — Bounce Rate
+Contentsquare provides industry/device benchmarking. BRAIN should prefer industry-specific values over universal bounce rate.
+BRAIN Dimension: ACQUISITION / CONVERSION | Evidence Type: [BMK]
+
+BENCHMARK 059 — Frustration Signals
+Contentsquare tracks: JS errors, slow page loads, rage clicks, multiple clicks, low page activity. UX friction detection, not revenue benchmarks.
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK / OBS]
+
+============================================================
+SECTION 9 — CUSTOMER SUPPORT / REVENUE PROTECTION
+============================================================
+
+BENCHMARK 060 — Customer Support First Response Time (Gorgias 2026)
+  Email: <24 hours target, <12 hours excellent
+  Live Chat: <1 minute target, <30 seconds excellent
+  Social: <2 hours target, <1 hour excellent
+BRAIN Dimension: RETENTION / REVENUE PROTECTION | Evidence Type: [BMK]
+
+BENCHMARK 061 — Support First Response Time by Vertical
+At $10M GMV band: Hardware ~1.6 hours. Apparel ~8.8 hours. Variation: ~5.5x across verticals.
+BRAIN Dimension: REVENUE PROTECTION | Evidence Type: [BMK]
+
+BENCHMARK 062 — Customer Satisfaction (Gorgias)
+General ecommerce target: ~80–85%. Proactive/personalized: ~85–90%.
+BRAIN Dimension: REVENUE PROTECTION | Evidence Type: [BMK]
+
+BENCHMARK 063 — Support Automation vs Response Time
+Gorgias: Near-zero automation: ~736-minute response time. 30%+ automation: ~80 minutes.
+Caution: Do not interpret as "30% automation causes 10x faster" without qualification.
+BRAIN Dimension: REVENUE PROTECTION / INFRASTRUCTURE | Evidence Type: [BMK]
+
+BENCHMARK 064 — Tickets per 100 Orders (Health & Beauty)
+Gorgias Ecom Lab, March 2026: ~21 tickets / 100 orders. Priority: HIGH for skincare.
+BRAIN Dimension: REVENUE PROTECTION | Evidence Type: [BMK]
+
+BENCHMARKS 065–067 — Tickets per 100 Orders by Category
+  Electronics: ~46 / 100
+  Apparel: ~22 / 100
+  Food & Beverage: ~20 / 100
+Source: Gorgias Ecom Lab
+
+BENCHMARK 068 — One-Touch Resolution
+Gorgias Ecom Lab: Top-performing ~35.2%.
+BRAIN Dimension: REVENUE PROTECTION / OPERATIONS | Evidence Type: [BMK]
+
+BENCHMARK 069 — Top Performer CSAT
+Gorgias Ecom Lab: ~4.89 / 5. Top performer CSAT-positive: ~97.9%.
+BRAIN Dimension: REVENUE PROTECTION | Evidence Type: [BMK]
+
+============================================================
+SECTION 10 — QUIZ / PERSONALIZATION BENCHMARKS
+============================================================
+
+BENCHMARK 070 — Quiz Completion Rate
+Outgrow: ~70–80% considered good. Definition: Completed / Started.
+Priority: HIGH for skincare.
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+
+BENCHMARK 071 — Quiz Lead Conversion Rate
+Outgrow: ~25–30% good (lead form before results, skip possible). Results-page offer: ~10–12% good.
+Caution: Lead conversion is NOT purchase conversion.
+BRAIN Dimension: ACQUISITION / CONVERSION | Evidence Type: [BMK]
+
+BENCHMARK 072 — Quiz Results CTA Click Rate
+Outgrow: ~15–20% considered good. Measures post-quiz engagement.
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+
+BENCHMARK 073 — Quiz Completion Time
+Outgrow: ~1.5 minutes target. UX/friction diagnostic.
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+
+BENCHMARK 074 — Quiz Completion Rate (BRAIN V1 Range)
+Conservative: 50%. Base: 65%. Upside: 80%.
+Source: Outgrow + related references. Store as benchmark assumptions, NOT observed business data.
+Evidence Type: [BMK] / [ASM]. Do not claim actual quiz completion rate is 65% unless observed.
+
+============================================================
+SECTION 11 — QUIZ-TO-PURCHASE / SKINCARE
+============================================================
+
+BENCHMARK 075 — Quiz-to-Purchase Rate
+Historical reference (Octane AI skincare): 8% conservative, 12% base, 18% upside.
+IMPORTANT: Requires source validation before production use. Do not use quiz completion rate as substitute for quiz-to-purchase rate.
+Correct funnel: Visitors → Quiz exposure → Quiz starts → Quiz completions → Routine/result delivered → Product engagement → Purchase.
+Source status: REQUIRES SOURCE VALIDATION.
+BRAIN Dimension: CONVERSION | Evidence Type: [BMK]
+
+============================================================
+SECTION 12 — PRODUCT REPLENISHMENT / CUSTOMER LIFECYCLE
+============================================================
+
+BENCHMARK 076 — 90-Day Repeat Purchase Rate
+Historical references: ~15% conservative, ~20% base, ~25% upside.
+IMPORTANT: Do not treat as universal 2026 benchmark. Use only if source/methodology verified.
+Status: REQUIRES SOURCE VALIDATION.
+
+BENCHMARK 077 — Repeat Customer Rate
+General reference: ~28.2% (Shopify). Prefer over unsupported generic "20% 90-day RPR".
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 078 — Product Lifespan / Replenishment Window
+No universal benchmark.
+Recommended treatment: [OBS] from business data, [ASM] based on category, [DRV] recommended timing.
+Do NOT turn generic RPR into fixed 30/50/60/90-day replenishment period.
+
+============================================================
+SECTION 13 — SUBSCRIPTION / RECURRING COMMERCE
+============================================================
+
+BENCHMARK 079 — 12-Month Subscription Retention
+Recharge: Some verticals up to ~42% after 12 months. Subscription-specific, not general ecommerce.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 080 — Subscription vs General Ecommerce Retention
+Recharge: Subscription up to ~42% at 12 months vs ~1% monthly general ecommerce retention (historical, definitions differ).
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+BENCHMARK 081 — Subscription Renewal Rate
+Recharge dashboards: renewal rate, lifetime revenue, subscription growth, retention, acquisition.
+BRAIN Dimension: RETENTION | Evidence Type: [BMK]
+
+============================================================
+SECTION 14 — REVIEWS / SOCIAL PROOF
+============================================================
+
+BENCHMARK 082 — Consumer Use of Gen AI for Product Discovery
+Bazaarvoice 2025: ~24% prefer searching via generative AI. Age 18–34: ~41%.
+BRAIN Dimension: ACQUISITION | Evidence Type: [BMK]
+
+BENCHMARK 083 — Consumers Purchasing from Creator Recommendations
+Bazaarvoice 2025: ~1 in 3 shoppers buy from creator recommendations.
+BRAIN Dimension: ACQUISITION | Evidence Type: [BMK]
+
+BENCHMARK 084 — Review Presence
+Do NOT use one universal "reviews increase conversion by X%".
+Instead measure [OBS]: review count, average rating, review recency, platform, distribution, product-specific reviews. Compare against category data when available.
+BRAIN Dimension: CONVERSION / RETENTION | Evidence Type: [OBS] + [BMK]
+
+============================================================
+SECTION 15 — ADVERTISING BENCHMARKS
+============================================================
+
+BENCHMARK 085 — Meta / Paid Social CTR
+Do NOT hard-code universal Meta CTR. Use Triple Whale peer benchmarks: CTR, CPM, CPA, ROAS, AOV, new customer %, blended ROAS, blended CPA.
+BRAIN Dimension: ACQUISITION
+
+BENCHMARK 086 — Paid Advertising ROAS
+Compare: Business ROAS vs Industry/peer ROAS (not vs "good ROAS = 3x").
+BRAIN Dimension: ACQUISITION
+
+BENCHMARK 087 — New Customer %
+Triple Whale includes as peer-comparison metric. Assess whether paid acquisition brings new customers or recycles existing demand.
+BRAIN Dimension: ACQUISITION
+
+============================================================
+SECTION 16 — TRAFFIC / DISCOVERY
+============================================================
+
+BENCHMARK 088 — Organic / Search Visibility
+Do NOT interpret search position alone as revenue.
+Signals: branded search volume, non-branded visibility, ranking keywords, top 3/10 positions, estimated traffic, SERP features, competitor presence, search intent.
+Evidence: [OBS] / [DRV]
+BRAIN Dimension: ACQUISITION
+
+BENCHMARK 089 — Traffic Source Mix
+Categories: Organic, Paid Search, Paid Social, Organic Social, Direct, Referral, Email, SMS, Affiliate, Other.
+Compare against business model, not universal ideal mix.
+Evidence: [OBS] where available, [BMK] where externally benchmarked.
+BRAIN Dimension: ACQUISITION
+
+============================================================
+SECTION 17 — CUSTOMER LIFETIME VALUE
+============================================================
+
+BENCHMARK 090 — Customer Lifetime Value
+Formula: CLV = AOV x Purchase Frequency x Customer Lifespan
+Source: Shopify. Only as reliable as underlying inputs.
+BRAIN Dimension: RETENTION | Evidence Type: [DRV]
+
+BENCHMARK 091 — AOV
+Formula: AOV = Total Revenue / Total Orders
+Source: Shopify
+BRAIN Dimension: CONVERSION / RETENTION | Evidence Type: [DRV]
+
+BENCHMARK 092 — Purchase Frequency
+Formula: Purchase Frequency = Total Orders / Unique Customers
+BRAIN Dimension: RETENTION | Evidence Type: [DRV]
+
+============================================================
+SECTION 18 — REVENUE OPPORTUNITY MODEL INPUTS
+============================================================
+
+BENCHMARK 093 — Conversion Rate Headroom
+Method: Observed conversion vs relevant benchmark range. Example: Observed 1.4%, Benchmark 2.0–3.0%, Headroom 0.6–1.6pp. Do NOT automatically use benchmark maximum.
+
+BENCHMARK 094 — Retention Headroom
+Observed repeat purchase rate vs relevant benchmark range. Example: Observed 18%, Benchmark 25%, Headroom 7pp.
+
+BENCHMARK 095 — AOV Headroom
+Observed AOV vs category benchmark. Consider: product mix, margins, bundles, shipping threshold, upsell, cross-sell, discounting.
+
+BENCHMARK 096 — Revenue Per Visitor
+Formula: Revenue / Visitors or AOV x Conversion Rate. Do not mix session-based with visitor-based denominators without documenting.
+
+============================================================
+SECTION 19 — ACR FRAMEWORK BENCHMARK MAP
+============================================================
+
+ACQUISITION: Traffic, Traffic growth, Organic visibility, Paid traffic, Paid CTR, Paid CPC, Paid CPA, Paid ROAS, New customer %, Email/SMS list growth, Creator/affiliate, Search visibility, Social reach/followers, AI/search discovery
+
+CONVERSION: Ecommerce CVR, Add-to-cart rate, Cart abandonment, Checkout completion, Product-page engagement, Quiz participation/completion/result CTA/to-purchase, AOV, Revenue per visitor, Checkout friction, Mobile vs desktop CVR, Site performance, Reviews/social proof, Product discovery
+
+RETENTION: Repeat customer rate, Repeat purchase rate, Purchase frequency, 30/60/90/180/365-day repeat, Email open/CTR/conversion/revenue per recipient, SMS CTR/conversion/revenue per send, Subscription renewal, Churn, Winback, Replenishment, CLV, Support-contact rate, CSAT, First response time
+
+============================================================
+SECTION 20 — SKINCARE / BEAUTY-SPECIFIC BENCHMARK LIBRARY
+============================================================
+
+Priority sources: Dynamic Yield, Omnisend Beauty, Klaviyo Beauty, Triple Whale Beauty, Shopify retention, Outgrow quiz, Octane AI skincare quiz, Gorgias Health & Beauty, Bazaarvoice beauty, Statista beauty ecommerce
+
+SKINCARE METRICS BRAIN SHOULD TRACK:
+1. Ecommerce CVR 2. AOV 3. Repeat customer rate 4. Purchase frequency 5. Product lifecycle 6. Replenishment period 7. Quiz availability/completion/to-purchase 8. Routine/personalization 9. Email capture 10. Welcome/browse abandonment/cart abandonment/post-purchase/replenishment/winback flows 11. Subscription 12. Reviews/rating 13. Support contact rate/response time 14. Instagram/TikTok followers 15. Paid ads/creative themes 16. Product count/price range 17. Technology stack
+
+============================================================
+SECTION 21 — BRAIN BENCHMARK PRIORITY LEVELS
+============================================================
+
+TIER A — CORE (V1): Ecommerce CVR, Industry CVR, AOV, Cart abandonment, Repeat customer rate, Email performance, Quiz completion, Add-to-cart rate, Paid acquisition metrics, Support intensity/response time, Product/category benchmark
+
+TIER B — STRATEGIC: Purchase frequency, CLV, Revenue per recipient, SMS, Checkout UX, Mobile vs desktop CVR, Reviews, Traffic mix, ROAS, CPA, Support efficiency, Subscription retention
+
+TIER C — ADVANCED (V2): Quiz-to-purchase, Replenishment conversion, Lifecycle-flow revenue, Cohort retention, Revenue per visitor/session, New customer %, AI/search discovery, Creator commerce, Channel-specific LTV
+
+============================================================
+SECTION 22 — SOURCE QUALITY RANKING
+============================================================
+
+LEVEL 1 — PRIMARY PLATFORM DATA (highest): Klaviyo, Omnisend, Triple Whale, Gorgias Ecom Lab, Dynamic Yield, Contentsquare, Baymard, Smile.io, Recharge
+
+LEVEL 2 — PRIMARY INDUSTRY RESEARCH (strong): Shopify research, Bazaarvoice, Outgrow, WordStream, Statista, Octane AI
+
+LEVEL 3 — SECONDARY COMPILATIONS (use carefully): HubSpot benchmark compilations, agency roundups, marketing blogs aggregating studies
+
+LEVEL 4 — UNSOURCED BLOG CLAIMS (do not use): If no source, date, methodology, sample size, or metric definition → classify [UNVERIFIED]
+
+============================================================
+SECTION 23 — BENCHMARK RECORD SCHEMA
+============================================================
+
+Every benchmark should have:
+benchmark_id, metric, dimension (ACQUISITION/CONVERSION/RETENTION), subcategory, value, unit, lower_bound, upper_bound, central_value, source_name, source_url, publication_date, dataset_period, sample_size, geography, industry, business_model, metric_definition, evidence_type [BMK], confidence (HIGH/MEDIUM/LOW), applicability, limitations, last_verified.
+
+============================================================
+SECTION 24 — IMPORTANT BENCHMARK CONFLICTS
+============================================================
+
+Do NOT force different sources into one number. Example: Conversion rates differ across Triple Whale (2.66%), Dynamic Yield (2.72%), Shopify (3.2%), Triple Whale Shopify (1.4%) due to different datasets, years, traffic, denominators, store populations, inclusion criteria, business models.
+RULE: Store benchmark with its source. Do NOT create "Official rate = X%". Select most appropriate based on business context.
+
+============================================================
+SECTION 25 — BENCHMARK SELECTION ALGORITHM
+============================================================
+
+STEP 1: Match industry (skincare/beauty before general ecommerce)
+STEP 2: Match business model (DTC before generic)
+STEP 3: Match traffic source (paid vs organic)
+STEP 4: Match geography (US/UK/global)
+STEP 5: Match date (prefer newest credible dataset)
+STEP 6: Match denominator (sessions vs visitors vs users)
+STEP 7: Match metric definition ("repeat customer rate" != "90-day repeat purchase rate")
+STEP 8: Calculate confidence (High: industry+model+geography+current data match. Medium: some mismatch. Low: generic/old.)
+
+============================================================
+SECTION 26 — BRAIN REVENUE MODEL GUARDRAILS
+============================================================
+
+RULE 1: No revenue estimate if traffic is missing.
+RULE 2: No revenue estimate if AOV completely unknown and cannot be benchmarked.
+RULE 3: Do not treat benchmark maximum as target.
+RULE 4: Do not treat benchmark gap as fully recoverable.
+RULE 5: Apply realization factor: Conservative 25%, Base 50%, Upside 75%.
+RULE 6: Apply model risk buffer: Conservative 15%, Base 10%, Upside 5%.
+RULE 7: Apply automation maturity modifier: No flows x1.20, Basic flows x1.00, Mature stack x0.75.
+RULE 8: Separate Revenue Creation from Revenue Protection.
+RULE 9: Do not convert 90-day metric to 30-day without statistical support.
+RULE 10: Do not infer quiz purchase conversion from quiz completion.
+RULE 11: If observed conversion already above benchmark, shift attention to retention/AOV/acquisition efficiency/support/CX.
+
+============================================================
+SECTION 27 — BENCHMARKS NOT YET HARD-CODED
+============================================================
+
+Need stronger source validation:
+1. Skincare quiz-to-purchase: 8%/12%/18%
+2. Generic 90-day RPR: 15%/20%/25%
+3. Skincare AOV: $45/$65/$85
+4. Quiz participation: 3%/5%/8%
+5. Email list-to-traffic: 5%/7.5%/10%
+6. Support contact rate: 5%/7.5%/10%
+
+May be useful working assumptions but not authoritative until source/date/definition verified.
+
+============================================================
+SECTION 28 — CURRENT HIGH-VALUE PRIMARY SOURCES
+============================================================
+
+SOURCE 001 — Triple Whale: ecommerce CVR, AOV, paid ads, ROAS, CPA, CTR, CPM, ATC, cart abandonment
+  2026: https://www.triplewhale.com/blog/ecommerce-benchmarks
+  Ads: https://www.triplewhale.com/blog/ads-benchmarks
+
+SOURCE 002 — Klaviyo: email open rate, CTR, revenue per recipient, order rate, industry-specific
+  2026: https://www.klaviyo.com/products/email-marketing/benchmarks
+
+SOURCE 003 — Omnisend: email, automation, SMS, revenue per send, conversion, lifecycle
+  Email: https://www.omnisend.com/blog/email-marketing-benchmarks/
+  SMS: https://www.omnisend.com/blog/sms-marketing-benchmarks/
+
+SOURCE 004 — Baymard Institute: checkout, cart abandonment, checkout UX, form friction
+  https://baymard.com/research/checkout-usability
+
+SOURCE 005 — Dynamic Yield: conversion, ATC, cart abandonment, industry, device, geography
+  https://marketing.dynamicyield.com/benchmarks/
+
+SOURCE 006 — Contentsquare: digital experience, conversion, bounce, engagement, friction, session depth
+  https://csquad.contentsquare.com/benchmarks-explorer
+
+SOURCE 007 — Gorgias Ecom Lab: customer support, FRT, CSAT, ticket volume, support intensity, automation
+  https://ecom-lab.gorgias.com/
+
+SOURCE 008 — Smile.io: repeat customer rate, purchase frequency, CLV, loyalty, AOV
+  https://blog.smile.io/ecommerce-customer-loyalty-report/
+
+SOURCE 009 — Shopify: retention, AOV, CLV, ecommerce KPI definitions
+  https://www.shopify.com/blog/basic-ecommerce-metrics
+  https://www.shopify.com/enterprise/blog/ecommerce-customer-retention
+
+SOURCE 010 — Outgrow: quiz completion, quiz lead conversion, quiz CTA engagement, quiz UX
+  https://intercom.help/outgrow/en/articles/575774-analytics
+
+SOURCE 011 — Recharge: subscription, retention, renewal, recurring revenue
+  https://support.getrecharge.com/hc/en-us/articles/22847729466903-Performance-dashboards-overview
+
+SOURCE 012 — Bazaarvoice: shopper behavior, reviews, creator commerce, AI product discovery
+  https://www.bazaarvoice.com/resources/shopper-preference-report-2025/
+
+SOURCE 013 — WordStream: Google Ads CTR, CPC, conversion, CPL
+  https://www.wordstream.com/blog/2025-google-ads-benchmarks
+
+============================================================
+SECTION 29 — RECOMMENDED BRAIN V1 BENCHMARK SET
+============================================================
+
+For BRAIN V1, use this curated subset (28 core benchmarks):
+
+1. Ecommerce Conversion Rate (Triple Whale ~2.66%, Dynamic Yield ~2.72%)
+2. Industry Conversion Rate (Beauty/Personal Care ~5.39% per Dynamic Yield)
+3. Beauty/Skincare Conversion Rate (~5.39% Dynamic Yield, ~1.40% Shopify)
+4. Add-to-Cart Rate (~5.98% Triple Whale)
+5. Cart Abandonment Rate (~70.19% Baymard, ~70.22% Triple Whale)
+6. Beauty Cart Abandonment (~81.71% Triple Whale)
+7. AOV (Global ~$130 Shopify, DTC Paid ~$61.22 Triple Whale)
+8. Beauty/Skincare AOV (use category-specific when available)
+9. Repeat Customer Rate (~28.2% Shopify)
+10. Purchase Frequency (Smile.io — CPG ~14% YoY growth)
+11. Email Open Rate (Klaviyo — industry-specific)
+12. Email CTR (Klaviyo — industry-specific)
+13. Email Revenue Per Recipient (Klaviyo — industry-specific)
+14. Email Automation Conversion (~1.49% Omnisend vs ~0.08% campaign)
+15. SMS CTR (~12.39% campaign, ~20.32% automated Omnisend)
+16. SMS Conversion (~0.12% campaign, ~0.77% automated Omnisend)
+17. Quiz Completion Rate (~70–80% Outgrow, V1 range 50/65/80%)
+18. Quiz CTA Click Rate (~15–20% Outgrow)
+19. Support Contact Rate (Health & Beauty ~21/100 orders Gorgias)
+20. Support Response Time (Email <24h, Chat <1min, Social <2h Gorgias)
+21. Support Intensity (Hardware ~1.6h vs Apparel ~8.8h FRT Gorgias)
+22. Review Count (measure [OBS], compare against category)
+23. Review Rating (measure [OBS], target ~4.89 top performer Gorgias)
+24. Paid CTR (~1.93% Triple Whale)
+25. Paid CPA (~$23.20 Triple Whale)
+26. Paid ROAS (industry medians Triple Whale, see Benchmark 052)
+27. Mobile Conversion (~1.20% vs Desktop ~1.90% Triple Whale)
+28. Checkout Friction (~5.1 steps, ~19.9 form elements, ~65% mediocre UX Baymard)
+
+============================================================
+SECTION 30 — RECOMMENDED BRAIN V2 BENCHMARK EXPANSION
+============================================================
+
+V2 additions:
+ACQUISITION: CAC, MER, blended ROAS, branded/non-branded search, organic/paid traffic growth, creator CAC, affiliate contribution, new customer %, acquisition payback
+CONVERSION: Product page CVR, begin checkout, checkout completion, payment failure, mobile/desktop CVR, returning/new visitor CVR, quiz exposure/starts/completion, routine delivery/CTA click, quiz-to-purchase
+RETENTION: 30/60/90/180/365-day RPR, churn, winback, replenishment, subscription renewal/churn, CLV, contribution margin LTV
+CUSTOMER EXPERIENCE: FRT, FCR, CSAT, CES, NPS, tickets/100 orders, refund/return/complaint rate, support-contact rate, order issue rate
+
+============================================================
+SECTION 31 — BRAIN BENCHMARK DATA PRINCIPLE
+============================================================
+
+The benchmark library should function as a benchmark intelligence layer. Every benchmark should answer:
+1. WHAT is being measured?
+2. HOW is it calculated?
+3. WHO measured it?
+4. WHEN was it measured?
+5. HOW MANY businesses/customers/sessions were included?
+6. WHERE were they located?
+7. WHAT industry?
+8. WHAT business model?
+9. WHAT denominator?
+10. HOW applicable is it to this prospect?
+11. WHAT limitations exist?
+12. WHAT BRAIN decision does it influence?
+
+============================================================
+SECTION 32 — FINAL BRAIN EVIDENCE HIERARCHY
+============================================================
+
+HIGHEST: Direct business data [OBS]
+NEXT: Industry-specific benchmark from credible primary dataset [BMK]
+NEXT: General ecommerce benchmark [BMK]
+NEXT: Derived comparison [DRV]
+LOWER: Assumption [ASM]
+LOWEST: Unsupported claim [UNVERIFIED] — Do NOT use in revenue calculations.
+
+============================================================
+END OF BRAIN BENCHMARK DIRECTORY
+============================================================

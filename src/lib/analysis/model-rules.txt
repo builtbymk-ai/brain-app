@@ -1,0 +1,152 @@
+============================================================
+BRAIN MODEL RULES
+Business Revenue Assessment & Intelligence Node
+Methodological Parameters & Evidence Rules — NOT benchmarks
+============================================================
+
+DOCUMENT PURPOSE
+----------------
+These are BRAIN's internal model parameters and methodological
+rules. They are NOT benchmarks. They are the calculation rules
+that BRAIN applies AFTER evidence has been gathered and compared
+against benchmarks.
+
+These parameters define HOW BRAIN reasons, not WHAT the market
+does. They can be tuned as BRAIN matures without affecting the
+benchmark record library.
+
+============================================================
+SECTION M1 — EVIDENCE TAG DEFINITIONS
+============================================================
+
+[OBS]  Observed directly from the business (highest confidence)
+[BMK]  External benchmark from a credible primary dataset
+[ASM]  Explicit assumption (must be labelled as such)
+[DRV]  Derived/calculated from observed or benchmark data
+[UNVERIFIED]  Unsupported claim — MUST NOT drive revenue math
+
+============================================================
+SECTION M2 — MODEL PARAMETERS (RULES, NOT BENCHMARKS)
+============================================================
+
+P1. Realization factors
+    Conservative: 25%
+    Base: 50%
+    Upside: 75%
+    Meaning: the share of a measured benchmark gap that BRAIN
+    treats as potentially addressable.
+
+P2. Model risk buffers
+    Conservative: 15%
+    Base: 10%
+    Upside: 5%
+    Meaning: haircut applied after realization to account for
+    model error.
+
+P3. Automation maturity modifier (MULTIPLIER, not a benchmark)
+    No automated lifecycle flows: x1.20
+    Basic flows: x1.00
+    Mature stack: x0.75
+    Meaning: adjusts the confidence of opportunity sizing, NOT
+    the size of the opportunity itself.
+
+P4. Data sufficiency thresholds for revenue math
+    Revenue scenario math REQUIRES:
+      - traffic estimate        (any, incl. heuristic floor)
+      - AOV or benchmarked AOV  (category-matched)
+    If either is missing → scenarios = INSUFFICIENT_DATA.
+
+P5. Confidence mapping
+    HIGH:   OBS data + matched BMK + current dataset
+    MEDIUM: some OBS data + relevant BMK
+    LOW:    no OBS data, or only generic/unverified BMK
+
+============================================================
+SECTION M3 — REASONING RULES
+============================================================
+
+R1. A benchmark gap is NOT recoverable revenue.
+    GAP is an input. OPPORTUNITY = GAP x realization x buffer.
+
+R2. Do not treat benchmark maximum as target.
+
+R3. Do not convert a 90-day metric into a 30-day metric
+    without statistical justification.
+
+R4. Do not infer quiz purchase conversion from quiz completion.
+
+R5. If observed performance is already above the relevant
+    benchmark, do NOT manufacture a conversion opportunity.
+    Shift analysis to retention, AOV, acquisition efficiency,
+    support, and CX.
+
+R6. Unverified benchmarks (STATUS: REQUIRES SOURCE VALIDATION
+    or [UNVERIFIED]) may be cited as context ONLY. They must
+    NEVER drive quantitative revenue calculations.
+
+R7. Missing inputs are reported as INSUFFICIENT_DATA or
+    "Not found" — never silently replaced by zero or fabricated.
+
+R8. Denominator discipline: sessions vs visitors vs users
+    must not be mixed without documentation.
+
+R9. Separation of concerns:
+    Revenue Creation  = conversion, AOV, acquisition, repeat
+    Revenue Protection = support, refunds, churn prevention, CX
+
+R10. Every quantitative output must trace to at least one of:
+     [OBS] input, or [BMK] benchmark with source, or a
+     documented [ASM].
+
+============================================================
+SECTION M4 — SCENARIO MODEL PROCEDURE
+============================================================
+
+PROCEDURE (applied only when P4 data sufficiency passes):
+
+STEP 1. Identify relevant benchmark (Section 25 of benchmark
+        directory: industry > model > geography > date >
+        denominator > definition).
+
+STEP 2. Compute the gap between observed and benchmark.
+        GAP = benchmark - observed (per metric).
+
+STEP 3. Apply realization factor per scenario:
+        Conservative GAP x 0.25
+        Base         GAP x 0.50
+        Upside       GAP x 0.75
+
+STEP 4. Apply risk buffer:
+        Conservative GAP x (1 - 0.15)
+        Base         GAP x (1 - 0.10)
+        Upside       GAP x (1 - 0.05)
+
+STEP 5. Apply automation maturity modifier ONLY to confidence,
+        not to scenario values.
+
+STEP 6. Label every output with evidence tags and cite the
+        benchmark IDs used.
+
+STEP 7. If any required input is missing at any step, the
+        scenario becomes INSUFFICIENT_DATA for that metric.
+
+============================================================
+SECTION M5 — INSUFFICIENT DATA HANDLING
+============================================================
+
+INSUFFICIENT_DATA means: BRAIN refuses to produce a number.
+
+Required outputs when INSUFFICIENT_DATA:
+  - state which inputs are missing
+  - state what would be needed to produce an estimate
+  - do NOT substitute a presence score, heuristic, or guess
+
+Example output:
+  "Revenue scenarios: INSUFFICIENT_DATA.
+   Missing: AOV (no category benchmark match).
+   Needed: product pricing page or category AOV benchmark
+   to estimate incremental revenue headroom."
+
+============================================================
+END OF BRAIN MODEL RULES
+============================================================
