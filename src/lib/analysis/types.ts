@@ -8,11 +8,12 @@
  *
  * Evidence tags:
  *   [OBS] Observed   [BMK] Benchmark   [ASM] Assumption   [DRV] Derived
+ *   [EST] Externally Estimated
  */
 
 export type ScenarioKey = 'conservative' | 'base' | 'upside';
 
-export type EvidenceBasis = 'OBS' | 'BMK' | 'ASM' | 'DRV' | 'INSUFFICIENT_DATA';
+export type EvidenceBasis = 'OBS' | 'BMK' | 'ASM' | 'DRV' | 'EST' | 'INSUFFICIENT_DATA';
 
 export type AutomationMaturity = 'none' | 'basic' | 'mature';
 

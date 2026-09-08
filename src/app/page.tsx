@@ -64,28 +64,6 @@ export default function LandingPage() {
             <p className="hero-support-text">
               Research up to 10 businesses in one session. Choose owner research or prospect research at the workspace.
             </p>
-
-            <div className="hero-loop" aria-label="Support loop">
-              <span>More support</span>
-              <span className="hero-loop-arrow" aria-hidden="true">
-                →
-              </span>
-              <span>Better infrastructure</span>
-              <span className="hero-loop-arrow" aria-hidden="true">
-                →
-              </span>
-              <span>Higher limits</span>
-              <span className="hero-loop-arrow" aria-hidden="true">
-                →
-              </span>
-              <span>Better research</span>
-              <span className="hero-loop-arrow" aria-hidden="true">
-                →
-              </span>
-              <span className="hero-loop-highlight">
-                Results you can TRUST
-              </span>
-            </div>
           </div>
         </section>
 
@@ -241,6 +219,29 @@ export default function LandingPage() {
               <Link href="/research" className="spreadsheet-export">
                 Clean structured export — $1.50
               </Link>
+            </div>
+
+            {/* Support Loop — positioned under spreadsheet */}
+            <div className="hero-loop" aria-label="Support loop">
+              <span>More support</span>
+              <span className="hero-loop-arrow" aria-hidden="true">
+                →
+              </span>
+              <span>Better infrastructure</span>
+              <span className="hero-loop-arrow" aria-hidden="true">
+                →
+              </span>
+              <span>Higher limits</span>
+              <span className="hero-loop-arrow" aria-hidden="true">
+                →
+              </span>
+              <span>Better research</span>
+              <span className="hero-loop-arrow" aria-hidden="true">
+                →
+              </span>
+              <span className="hero-loop-highlight">
+                Results you can TRUST
+              </span>
             </div>
           </div>
         </section>

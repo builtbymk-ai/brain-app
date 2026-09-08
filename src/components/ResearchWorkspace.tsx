@@ -301,7 +301,9 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
             <div className="rw-input-list">
               {inputs.map((input, index) => (
                 <div key={index} className="rw-input-row rw-input-row-3col">
+                  <label className="rw-input-label rw-input-label-name" htmlFor={`brand-${index}-${userType}`}>{mode.inputHeads[0]}</label>
                   <input
+                    id={`brand-${index}-${userType}`}
                     type="text"
                     className="rw-input"
                     placeholder={mode.placeholders[0]}
@@ -310,7 +312,9 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
                     value={input.brandName}
                     onChange={(e) => updateInput(index, 'brandName', e.target.value)}
                   />
+                  <label className="rw-input-label rw-input-label-url" htmlFor={`url-${index}-${userType}`}>{mode.inputHeads[1]}</label>
                   <input
+                    id={`url-${index}-${userType}`}
                     type="text"
                     className="rw-input"
                     placeholder={mode.placeholders[1]}
@@ -323,7 +327,9 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
                       }
                     }}
                   />
+                  <label className="rw-input-label rw-input-label-solution" htmlFor={`solution-${index}-${userType}`}>{mode.inputHeads[2]}</label>
                   <input
+                    id={`solution-${index}-${userType}`}
                     type="text"
                     className="rw-input"
                     placeholder={mode.placeholders[2]}

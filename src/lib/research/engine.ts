@@ -4,6 +4,7 @@ import { scrapeWebsite } from './firecrawl';
 import { gatherSocial } from './apify';
 import { enrichCompany } from './apollo';
 import { estimateSearchVisibility } from './serpapi';
+import { estimateTrafficFromSimilarWeb } from './similarweb';
 import { analyzeBusiness } from '../analysis/gemini';
 import { calculateAcrOpportunity } from '../analysis/calculator';
 import { BusinessResult, CapturedSignals, UserType } from './types';
@@ -42,15 +43,18 @@ export async function researchBusiness(
   const social = await gatherSocial(domain, website?.socialLinks ?? []);
   const company = await enrichCompany(domain);
   const traffic = await estimateSearchVisibility(domain);
+  
+  // Get SimilarWeb traffic estimate for monthly visits
+  const similarWebTraffic = await estimateTrafficFromSimilarWeb(domain);
 
   // Attempt benchmark context (heuristic, clearly labelled as benchmark).
-  const benchmarkSignals = buildBenchmarkSignals({ website, social, company, traffic });
+  const benchmarkSignals = buildBenchmarkSignals({ website, social, company, traffic, similarWebTraffic });
 
   const captured: CapturedSignals = {
     website: website?.signals ?? null,
     social: social.signals,
     company: company.signals,
-    traffic: traffic.signals,
+    traffic: [...traffic.signals, ...similarWebTraffic.signals],
     benchmarking: benchmarkSignals,
   };
 
@@ -58,7 +62,8 @@ export async function researchBusiness(
   const products = estimateProducts(website?.productCount ?? 0);
   const reviews = estimateReviews(website, social);
   const quiz = website?.hasQuiz ? 'Present' : 'Not found';
-  const monthlyTraffic = estimateMonthlyTraffic(traffic, website);
+  const monthlyTraffic = estimateMonthlyTraffic(traffic, website, similarWebTraffic);
+  const trafficSource = getTrafficSource(traffic, website, similarWebTraffic);
 
   // Aggregate numbers feeding the analysis layer.
   const aggregate = {
@@ -94,7 +99,7 @@ export async function researchBusiness(
       hasQuiz: website ? website.hasQuiz : null,
     },
     aggregate.traffic,
-    { userType }
+    { userType, trafficSource }
   );
 
   const analysis = await analyzeBusiness({ ...aggregate, calculated });
@@ -130,6 +135,7 @@ function buildBenchmarkSignals(input: {
   social: { followerEstimate: number | null };
   company: { employeeCount: number | null };
   traffic: { visibilityScore: number | null };
+  similarWebTraffic: { monthlyVisits: number | null };
 }): CapturedSignals['benchmarking'] {
   const signals = [];
   if (input.website?.productCount != null && input.website.productCount > 0) {
@@ -146,6 +152,14 @@ function buildBenchmarkSignals(input: {
       source: 'industry',
       value: `Visibility score ${input.traffic.visibilityScore}/100`,
       note: 'Search-visibility benchmark',
+    });
+  }
+  if (input.similarWebTraffic?.monthlyVisits != null) {
+    signals.push({
+      tag: 'BMK' as const,
+      source: 'similarweb',
+      value: `SimilarWeb monthly visits: ~${formatTrafficForBenchmark(input.similarWebTraffic.monthlyVisits)}`,
+      note: 'Traffic benchmark from SimilarWeb',
     });
   }
   return signals.length ? signals : null;
@@ -168,9 +182,10 @@ function estimateReviews(website: { markdown: string } | null, _social: { follow
 
 function estimateMonthlyTraffic(
   traffic: { visibilityScore: number | null; resultCount: number | null },
-  website: { markdown: string } | null
+  website: { markdown: string } | null,
+  similarWebTraffic: { monthlyVisits: number | null; confidence: string } | null
 ): string {
-  // [OBS] Prefer a traffic figure actually declared on the site.
+  // [OBS] Priority 1: Prefer a traffic figure actually declared on the site.
   const text = website?.markdown?.toLowerCase() ?? '';
   const trafficMatch = text.match(/(\d[\d,.]*\s*[kmb]?)\s*(monthly\s+)?(visitors|visits|traffic|sessions)/);
   if (trafficMatch) {
@@ -180,7 +195,13 @@ function estimateMonthlyTraffic(
     if (/[KMB]$/.test(normalized)) return `${normalized}+`;
   }
 
-  // [DRV] No declared figure → report honestly instead of fabricating.
+  // [OBS] Priority 2: Use SimilarWeb traffic estimate if available with high confidence.
+  // SimilarWeb provides defensible estimates based on their methodology (panel data, crawling, modeling).
+  if (similarWebTraffic?.monthlyVisits != null && similarWebTraffic.confidence === 'high') {
+    return formatTrafficForDisplay(similarWebTraffic.monthlyVisits);
+  }
+
+  // [DRV] No declared figure and no high-confidence SimilarWeb data → report honestly.
   // A SERP visibility score is NOT visit data: converting it into a visit
   // count fabricated numbers (every domain previously read "82K+"). The
   // score is retained in rawSignals for the analysis layer; monthly traffic
@@ -198,6 +219,46 @@ function estimateMonthlyTraffic(
  */
 function parseTrafficEstimate(display: string): number | null {
   return parseTrafficEstimateTestable(display);
+}
+
+/**
+ * Determine the traffic source for provenance tracking.
+ * Used by the calculator to distinguish observed vs estimated traffic.
+ */
+function getTrafficSource(
+  traffic: { visibilityScore: number | null; resultCount: number | null },
+  website: { markdown: string } | null,
+  similarWebTraffic: { monthlyVisits: number | null; confidence: string } | null
+): 'observed' | 'estimated' {
+  // Priority 1: Website-declared traffic
+  const text = website?.markdown?.toLowerCase() ?? '';
+  const trafficMatch = text.match(/(\d[\d,.]*\s*[kmb]?)\s*(monthly\s+)?(visitors|visits|traffic|sessions)/);
+  if (trafficMatch) {
+    const normalized = trafficMatch[1].replace(/\s+/g, '').toUpperCase();
+    if (/[KMB]$/.test(normalized)) return 'observed';
+  }
+
+  // Priority 2: SimilarWeb estimated traffic
+  if (similarWebTraffic?.monthlyVisits != null && similarWebTraffic.confidence === 'high') {
+    return 'estimated';
+  }
+
+  // Fallback: no traffic (will be null)
+  return 'estimated';
+}
+
+function formatTrafficForDisplay(n: number): string {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B+`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M+`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K+`;
+  return `${n}+`;
+}
+
+function formatTrafficForBenchmark(n: number): string {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
+  return `${n}`;
 }
 
 function formatRevenueRange(analysis: BusinessResult['analysis']): string {

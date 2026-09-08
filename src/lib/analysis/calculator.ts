@@ -442,7 +442,7 @@ function calculateRetentionPath(
 export function calculateAcrOpportunity(
   research: CalculatorResearchData,
   researchTraffic: number | null,
-  analysisConfig: { userType: 'owner' | 'prospect'; automationMaturity?: 'none' | 'basic' | 'mature' }
+  analysisConfig: { userType: 'owner' | 'prospect'; automationMaturity?: 'none' | 'basic' | 'mature'; trafficSource?: 'observed' | 'estimated' }
 ): CalculatedMetrics {
   const ledger: FormulaStep[] = [];
   const missing: string[] = [];
@@ -454,9 +454,15 @@ export function calculateAcrOpportunity(
   const userType = analysisConfig.userType;
 
   // Traffic comes from the research layer (display value already parsed).
+  // trafficSource distinguishes observed (website-declared) from estimated (SimilarWeb).
+  const trafficSource = analysisConfig.trafficSource ?? 'estimated';
+  const trafficBasis = trafficSource === 'observed' ? 'OBS' : 'EST';
+  const trafficProvenance = trafficSource === 'observed'
+    ? '[OBS] Monthly traffic declared on website'
+    : '[EST] Monthly traffic estimated by SimilarWeb';
   const traffic: ResolvedInput =
     researchTraffic != null && researchTraffic > 0
-      ? { value: researchTraffic, basis: 'OBS', provenance: '[OBS] Monthly traffic estimate captured by research engine' }
+      ? { value: researchTraffic, basis: trafficBasis, provenance: trafficProvenance }
       : insufficient('Monthly visitors', 'no reliable traffic estimate captured');
 
   const resolved = resolveInputs(research, industry);
