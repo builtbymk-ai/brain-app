@@ -147,7 +147,7 @@ export default function LandingPage() {
                   Business Research — Preview
                 </span>
                 <span className="spreadsheet-topbar-meta">
-                  8 displayed fields · Sample output
+                  9 displayed fields · Sample output
                 </span>
               </div>
               <div className="spreadsheet-scroll">
@@ -159,8 +159,9 @@ export default function LandingPage() {
                       <th scope="col">Monthly Traffic</th>
                       <th scope="col">Products</th>
                       <th scope="col">Reviews</th>
-                      <th scope="col">Quiz</th>
-                      <th scope="col">Revenue Opportunity</th>
+                      <th scope="col">On-site Data Collection</th>
+                      <th scope="col">Potential Revenue Lift</th>
+                      <th scope="col">Revenue Calculation</th>
                       <th scope="col">Growth Assessment</th>
                     </tr>
                   </thead>
@@ -176,7 +177,21 @@ export default function LandingPage() {
                       <td>36</td>
                       <td>2,840</td>
                       <td>Present</td>
-                      <td>$18K – $42K</td>
+                      <td>$8,420/mo</td>
+                      <td>
+                        <span className="rw-cell-calc">
+                          {`AOV = $89.17 [BMK]
+CVR = 2.66% [BMK]
+Data Collection Start = 5% [ASM]
+Completion = 65% [BMK]
+Purchase = 12% [ASM]
+
+Incremental Buyers = Collection Buyers − Baseline Buyers
+Gross Lift = Incremental Buyers × AOV
+Risk Adjustment = composite buffer
+Potential Lift = $8,420/mo`}
+                        </span>
+                      </td>
                       <td>74 / 100</td>
                     </tr>
                     <tr>
@@ -190,7 +205,21 @@ export default function LandingPage() {
                       <td>21</td>
                       <td>1,190</td>
                       <td>Not found</td>
-                      <td>$9K – $24K</td>
+                      <td>$5,240/mo</td>
+                      <td>
+                        <span className="rw-cell-calc">
+                          {`AOV = $61.22 [BMK]
+CVR = 2.66% [BMK]
+RPR = 28.2% [BMK]
+High RPR = 29% [BMK]
+
+Projected RPR = Baseline + ΔRPR × Realization
+Additional Buyers = Entering × ΔRPR
+LTV Lift = Additional Buyers × AOV
+Risk Adjustment = composite buffer
+Potential Lift = $5,240/mo`}
+                        </span>
+                      </td>
                       <td>61 / 100</td>
                     </tr>
                     <tr>
@@ -205,7 +234,20 @@ export default function LandingPage() {
                       <td>14</td>
                       <td>740</td>
                       <td>Present</td>
-                      <td>$6K – $16K</td>
+                      <td className="td-bold">$3,180/mo</td>
+                      <td>
+                        <span className="rw-cell-calc">
+                          {`AOV = $63.32 [BMK]
+CVR = 2.72% [BMK]
+Data Collection Start = 3% [ASM]
+Completion = 65% [BMK]
+Purchase = 8% [ASM]
+
+Gross Lift = Incremental Buyers × AOV
+Risk Adjustment = composite buffer
+Potential Lift = $3,180/mo`}
+                        </span>
+                      </td>
                       <td>55 / 100</td>
                     </tr>
                   </tbody>
@@ -562,7 +604,7 @@ function LandingFooter() {
                 <a href="#">Case Studies</a>
               </li>
               <li>
-                <a href="#sources">Benchmarks</a>
+                <Link href="/docs">Benchmarks &amp; Methodology</Link>
               </li>
             </ul>
           </div>

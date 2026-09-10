@@ -37,6 +37,8 @@ import {
   AUTOMATION_MATURITY_MODIFIERS,
   AUTOMATION_MATURITY_MODIFIERS as MATURITY,
   canDriveRevenueMath,
+  DATA_COLLECTION_ASM_NOTE,
+  DATA_COLLECTION_ASSUMPTIONS,
   effectiveRealization,
   guardAdditionalRepeatBuyers,
   guardIncrementalFirstPurchases,
@@ -110,6 +112,8 @@ function classifyIndustry(signals: string[]): { industry: IndustryKey; basis: st
 interface ResolvedInputs {
   traffic: ResolvedInput;
   aov: ResolvedInput;
+  /** True when AOV required the BMK-041 fallback basis (no verified category match). */
+  aovFallbackUsed: boolean;
   conversionRate: ResolvedInput;
   quizParticipation: ResolvedInput;
   quizCompletion: ResolvedInput;
@@ -123,13 +127,11 @@ interface ResolvedInputs {
 }
 
 /**
- * Resolve every model input with provenance. Unknown required values
- * resolve to INSUFFICIENT_DATA — never silently invented (R7).
- *
- * Quiz-to-purchase note: BENCHMARK 075 is unverified, so it can NEVER
- * supply the quizToPurchase value for revenue math. When unobserved,
- * quizToPurchase resolves to INSUFFICIENT_DATA and the conversion path
- * degrades honestly instead of using the 8/12/18 figures.
+ * Resolve every model input with provenance, following the approved
+ * evidence hierarchy: OBS → EST → validated BMK → documented ASM → DRV.
+ * Unknown required values resolve to INSUFFICIENT_DATA — never silently
+ * invented (R7). Unverified records (BMK-075/076) never drive revenue math
+ * or masquerade as benchmarks (R6).
  */
 function resolveInputs(
   research: CalculatorResearchData,
@@ -143,27 +145,48 @@ function resolveInputs(
   // Traffic comes from research evidence; presence implies the engine found a display value.
 
   // --- AOV ---
-  // P4 basis: observed AOV first; otherwise a VERIFIED category-matched
-  // benchmark may serve as the AOV basis (labelled [BMK]). Generic medians
-  // (BMK-041) and unverified records (BMK-BEAUTY-AOV) never qualify (R6/R10).
+  // Resolution hierarchy: observed → verified category-matched benchmark
+  // → BMK-041 (verified DTC paid-channel median) as an explicitly labelled
+  // fallback basis. The fallback keeps the verified record's identity but is
+  // flagged as a modelling fallback, never as observed data (R6/R10).
   const verifiedIndustryAov = selectVerifiedIndustryAov(industry);
-  const aov: ResolvedInput =
-    research.observedAov != null
-      ? { value: research.observedAov, basis: 'OBS', provenance: `[OBS] AOV observed from business data` }
-      : verifiedIndustryAov
-        ? benchmarkInput(verifiedIndustryAov, 'AOV', 'verified category-matched AOV benchmark used as the AOV basis (P4)')
-        : insufficient('AOV', 'not observed and no verified category AOV benchmark is confirmed for this business');
-
-  if (verifiedIndustryAov && research.observedAov == null) {
+  const dtcMedianAov = getBenchmark('BMK-041');
+  let aov: ResolvedInput;
+  let aovFallbackUsed = false;
+  if (research.observedAov != null) {
+    aov = { value: research.observedAov, basis: 'OBS', provenance: `[OBS] AOV observed from business data` };
+  } else if (verifiedIndustryAov) {
+    aov = benchmarkInput(verifiedIndustryAov, 'AOV', 'verified category-matched AOV benchmark used as the AOV basis (P4)');
     benchmarksUsed.push(toApplied(verifiedIndustryAov, 'AOV basis for ACR paths (P4 category-matched)'));
+  } else if (dtcMedianAov && dtcMedianAov.verification === 'verified') {
+    aov = {
+      value: dtcMedianAov.value,
+      basis: 'BMK',
+      provenance: `[BMK ${dtcMedianAov.id}] AOV — verified DTC paid-channel median used as fallback basis (no verified category AOV for ${industry}) [ASM-flagged fallback]`,
+      benchmarkId: dtcMedianAov.id,
+    };
+    benchmarksUsed.push(toApplied(dtcMedianAov, 'AOV fallback basis (P4) — no verified category match'));
+    aovFallbackUsed = true;
+    assumptions.push({
+      key: 'aovFallback',
+      value: `$${dtcMedianAov.value.toFixed(2)} (BMK-041)`,
+      note: 'No verified category AOV exists for this business — the verified DTC paid-channel median is used as an explicitly flagged fallback basis, not as observed business data.',
+    });
+  } else {
+    aov = insufficient('AOV', 'not observed and no verified category AOV benchmark is confirmed for this business');
   }
 
   // --- Conversion rate ---
+  // Resolution hierarchy: observed → validated benchmark (category-matched
+  // where applicable, otherwise BMK-001 global ecommerce CVR). The benchmark
+  // is ALWAYS labelled [BMK], never presented as observed.
   const cvrBench = selectConversionBenchmark(industry);
   const conversionRate: ResolvedInput =
     research.observedConversionRate != null
       ? { value: research.observedConversionRate, basis: 'OBS', provenance: '[OBS] Baseline conversion rate observed' }
-      : insufficient('Baseline conversion rate', 'not observable from public signals; generic benchmarks cannot stand in for this business');
+      : cvrBench && cvrBench.verification === 'verified'
+        ? benchmarkInput(cvrBench, 'Baseline conversion rate', 'validated benchmark fallback — business-specific conversion rate is not observable from public signals')
+        : insufficient('Baseline conversion rate', 'no observed value and no validated benchmark available');
 
   // --- Quiz funnel ---
   const completionBench = QUIZ_BENCHMARKS.find((b) => b.id === 'BMK-074');
@@ -184,32 +207,62 @@ function resolveInputs(
     quizCompletion = insufficient('Quiz completion rate', research.hasQuiz === false ? 'no quiz found on the site' : 'quiz presence undetermined');
   }
 
-  const participationBench = getBenchmark('BMK-075') as BenchmarkRecord | undefined;
+  // On-site Data Collection participation: scenario-banded explicit [ASM]
+  // (documented V1 working assumption, benchmark.txt Section 27) when a
+  // collection mechanism is present. BMK-075 is unverified and is NEVER used
+  // or labelled as a benchmark (R6).
   let quizParticipation: ResolvedInput;
-  if (research.hasQuiz === true && participationBench) {
-    // BENCHMARK 075's participation band (3/5/8%) is unverified → context only.
-    quizParticipation = insufficient(
-      'Quiz participation rate',
-      'participation benchmarks remain unvalidated (BENCHMARK 075 is context-only); requires observed quiz-start data'
-    );
+  if (research.hasQuiz === true) {
+    quizParticipation = {
+      value: DATA_COLLECTION_ASSUMPTIONS.participation.base,
+      basis: 'ASM',
+      provenance: `[ASM] Data-collection start rate — 3%/5%/8% scenario band (base shown), documented V1 working assumption (benchmark.txt Section 27). Not a validated benchmark.`,
+    };
+    assumptions.push({
+      key: 'dataCollectionParticipation',
+      value: '3% / 5% / 8% (conservative / base / upside)',
+      note: DATA_COLLECTION_ASM_NOTE,
+    });
   } else if (research.hasQuiz === false) {
-    quizParticipation = insufficient('Quiz participation rate', 'no quiz exists on the site');
+    quizParticipation = insufficient('Data-collection start rate', 'no on-site data collection mechanism was found on the site');
   } else {
-    quizParticipation = insufficient('Quiz participation rate', 'quiz presence undetermined');
+    quizParticipation = insufficient('Data-collection start rate', 'presence of on-site data collection undetermined');
   }
 
-  // Quiz-to-purchase: unverified benchmark can NEVER supply revenue math.
-  const quizToPurchase: ResolvedInput = insufficient(
-    'Quiz-to-purchase rate',
-    'the only available reference (BENCHMARK 075) is unverified and may not drive revenue math (MODEL RULES R6); requires observed purchase data'
-  );
+  // On-site Data Collection purchase conversion: scenario-banded explicit
+  // [ASM] from the same documented source. R4 discipline preserved: purchase
+  // conversion is never inferred from completion.
+  let quizToPurchase: ResolvedInput;
+  if (research.hasQuiz === true) {
+    quizToPurchase = {
+      value: DATA_COLLECTION_ASSUMPTIONS.purchase.base,
+      basis: 'ASM',
+      provenance: `[ASM] Data-collection purchase rate — 8%/12%/18% scenario band (base shown), documented V1 working assumption (benchmark.txt Section 27). Not a validated benchmark.`,
+    };
+    assumptions.push({
+      key: 'dataCollectionPurchase',
+      value: '8% / 12% / 18% (conservative / base / upside)',
+      note: DATA_COLLECTION_ASM_NOTE,
+    });
+  } else {
+    quizToPurchase = insufficient(
+      'Data-collection purchase rate',
+      research.hasQuiz === false
+        ? 'no on-site data collection mechanism exists on the site'
+        : 'presence of on-site data collection undetermined'
+    );
+  }
 
   // --- Retention ---
+  // Baseline RPR: observed → validated benchmark fallback (consumable-matched
+  // BMK-017 where applicable, otherwise BMK-015). Never labelled as observed.
   const rprBench = selectRetentionBenchmark(industry);
   const repeatPurchaseRate: ResolvedInput =
     research.observedRepeatPurchaseRate != null
       ? { value: research.observedRepeatPurchaseRate, basis: 'OBS', benchmarkId: undefined, provenance: '[OBS] Repeat purchase rate observed' }
-      : insufficient('Repeat purchase rate', 'not observable from public signals');
+      : rprBench && rprBench.verification === 'verified'
+        ? benchmarkInput(rprBench, 'Baseline repeat purchase rate', 'validated benchmark fallback — business-specific RPR is not observable from public signals')
+        : insufficient('Repeat purchase rate', 'no observed value and no validated benchmark available');
 
   const highRprBench = selectBenchmarkHighRpr(industry);
   let benchmarkHighRpr: ResolvedInput;
@@ -237,6 +290,7 @@ function resolveInputs(
   return {
     traffic,
     aov,
+    aovFallbackUsed,
     conversionRate,
     quizParticipation,
     quizCompletion,
@@ -317,28 +371,48 @@ function calculateConversionPath(
     return result;
   }
 
-  const participants = traffic * (quizParticipation.value as number);
-  const completions = participants * (quizCompletion.value as number);
-  const quizPurchases = completions * (quizToPurchase.value as number);
-  const baselineSegmentPurchases = participants * (conversionRate.value as number);
-
-  ledger.push({
-    formula: 'Quiz Participants = Monthly Visitors × Quiz Participation Rate',
-    inputs: { traffic, participation: round2(quizParticipation.value as number) },
-    output: Math.round(participants),
-    evidence: `[${quizParticipation.basis}] ${quizParticipation.provenance}`,
-  });
-
-  const incremental = guardIncrementalFirstPurchases(quizPurchases, participants);
-
-  ledger.push({
-    formula: 'Incremental First Purchases = MAX(0, Quiz Purchases − Participants × Baseline CVR), capped at Participants',
-    inputs: { quizPurchases: Math.round(quizPurchases), baselineSegmentPurchases: Math.round(baselineSegmentPurchases), participants: Math.round(participants) },
-    output: Math.round(incremental),
-    evidence: 'Guards per MODEL RULES (Part 15): never negative, never more than quiz participants',
-  });
-
+  // Scenario-banded funnel: ASM participation/purchase use their documented
+  // per-scenario values; completion stays the single verified BMK-074 value.
+  // ResolvedInput values are base-scenario values; the bands come from the
+  // ASM configuration so each scenario reflects its own band.
   for (const key of SCENARIO_ORDER) {
+    const participation =
+      quizParticipation.basis === 'ASM'
+        ? DATA_COLLECTION_ASSUMPTIONS.participation[key]
+        : (quizParticipation.value as number);
+    const purchaseRate =
+      quizToPurchase.basis === 'ASM'
+        ? DATA_COLLECTION_ASSUMPTIONS.purchase[key]
+        : (quizToPurchase.value as number);
+
+    const participants = traffic * participation;
+    const completions = participants * (quizCompletion.value as number);
+    const quizPurchases = completions * purchaseRate;
+    const baselineSegmentPurchases = participants * (conversionRate.value as number);
+
+    if (key === 'base') {
+      ledger.push({
+        formula: 'Data-Collection Participants = Monthly Visitors × Start Rate',
+        inputs: { traffic, participation: round2(participation), basis: quizParticipation.basis },
+        output: Math.round(participants),
+        evidence: `[${quizParticipation.basis}] ${quizParticipation.provenance}`,
+      });
+    }
+
+    const incremental = guardIncrementalFirstPurchases(
+      quizPurchases - baselineSegmentPurchases,
+      participants
+    );
+
+    if (key === 'base') {
+      ledger.push({
+        formula: 'Incremental First Purchases = MAX(0, Collection Purchases − Participants × Baseline CVR), capped at Participants',
+        inputs: { quizPurchases: Math.round(quizPurchases), baselineSegmentPurchases: Math.round(baselineSegmentPurchases), participants: Math.round(participants) },
+        output: Math.round(incremental),
+        evidence: 'Guards per MODEL RULES (Part 15): never negative, never more than participants',
+      });
+    }
+
     const eff = effectiveRealization(key, maturity);
     const raw = incremental * aov;
     result[key] = {
@@ -469,10 +543,10 @@ export function calculateAcrOpportunity(
 
   // --- Data sufficiency (P4) ---
   if (traffic.basis === 'INSUFFICIENT_DATA') missing.push('monthly traffic');
-  if (resolved.aov.basis === 'INSUFFICIENT_DATA') missing.push('AOV (observed or verified category benchmark)');
+  if (resolved.aov.basis === 'INSUFFICIENT_DATA') missing.push('AOV (observed or benchmarked)');
   if (resolved.conversionRate.basis === 'INSUFFICIENT_DATA') missing.push('baseline conversion rate');
-  if (resolved.quizParticipation.basis === 'INSUFFICIENT_DATA' && research.hasQuiz !== false) missing.push('quiz participation rate');
-  if (resolved.quizToPurchase.basis === 'INSUFFICIENT_DATA') missing.push('quiz-to-purchase rate (no verified benchmark exists)');
+  if (resolved.quizParticipation.basis === 'INSUFFICIENT_DATA' && research.hasQuiz !== false) missing.push('data-collection start rate');
+  if (resolved.quizToPurchase.basis === 'INSUFFICIENT_DATA' && research.hasQuiz !== false) missing.push('data-collection purchase rate');
 
   const status: CalculatedMetrics['sufficiency']['status'] =
     missing.length === 0 ? 'SUFFICIENT' : missing.length <= 2 ? 'PARTIAL' : 'INSUFFICIENT_DATA';
@@ -510,15 +584,35 @@ export function calculateAcrOpportunity(
       )
     : emptyScenario();
 
-  // LTV System customers: quiz purchases + observed monthly buyers only.
-  // Never fabricated — when neither can be established the path is null.
+  // LTV System customer population:
+  //   1. Observed monthly buyers ([OBS]) — highest priority
+  //   2. Glow Curator incremental purchases when the collection path ran [DRV]
+  //   3. Modelled monthly-buyer proxy = traffic × resolved baseline CVR
+  //      ([DRV]) when no observed population and no collection path exist —
+  //      a defensible, clearly labelled population, never fabricated.
+  const observedBuyers = research.observedMonthlyBuyers ?? null;
   const quizPurchasesForLtv =
     conversion.base.incrementalUnits !== null ? conversion.base.incrementalUnits : null;
-  const observedBuyers = research.observedMonthlyBuyers ?? null;
-  const customersEntering =
-    quizPurchasesForLtv !== null || observedBuyers !== null
-      ? (quizPurchasesForLtv ?? 0) + (observedBuyers ?? 0)
-      : null;
+  let customersEntering: number | null;
+  if (observedBuyers !== null && observedBuyers > 0) {
+    customersEntering = observedBuyers + (quizPurchasesForLtv ?? 0);
+  } else if (quizPurchasesForLtv !== null) {
+    customersEntering = quizPurchasesForLtv;
+  } else if (
+    traffic.value !== null &&
+    traffic.value > 0 &&
+    resolved.conversionRate.value !== null
+  ) {
+    customersEntering = Math.round(traffic.value * resolved.conversionRate.value);
+    ledger.push({
+      formula: 'Modelled Monthly Buyers = Monthly Traffic × Baseline CVR (proxy population)',
+      inputs: { traffic: traffic.value, baselineCvr: resolved.conversionRate.value },
+      output: customersEntering,
+      evidence: `[DRV] from traffic [${traffic.basis}] × CVR [${resolved.conversionRate.basis}] — no observed buyer population and no on-site data-collection path`,
+    });
+  } else {
+    customersEntering = null;
+  }
 
   const retention = revenueViable
     ? calculateRetentionPath(
@@ -568,16 +662,19 @@ export function calculateAcrOpportunity(
     : insufficient('Support contact rate', 'no verified benchmark match');
 
   // --- Limitations ---
-  if (resolved.quizToPurchase.basis === 'INSUFFICIENT_DATA') {
+  if (resolved.quizToPurchase.basis === 'ASM') {
     limitations.push(
-      'Quiz-to-purchase rate has no verified benchmark (BENCHMARK 075 is unverified and excluded from revenue math). Glow Curator requires observed quiz-funnel purchase data to size conversion opportunity.'
+      'Data-collection purchase conversion uses a documented scenario-band assumption (benchmark.txt Section 27), not a validated benchmark — treat the conversion opportunity as an indicative model, and verify with observed funnel data.'
     );
   }
-  if (resolved.conversionRate.basis === 'INSUFFICIENT_DATA') {
-    limitations.push('Baseline conversion rate is not observable from public signals — conversion path inputs require first-party or observed data.');
+  if (resolved.conversionRate.basis === 'BMK') {
+    limitations.push('Baseline conversion rate resolved from a validated industry benchmark — replace with observed analytics data when available.');
   }
-  if (resolved.repeatPurchaseRate.basis === 'INSUFFICIENT_DATA') {
-    limitations.push('Repeat purchase rate requires first-party data; public research cannot observe it.');
+  if (resolved.repeatPurchaseRate.basis === 'BMK') {
+    limitations.push('Baseline repeat-purchase rate resolved from a validated industry benchmark — replace with observed data when available.');
+  }
+  if (resolved.aovFallbackUsed) {
+    limitations.push('AOV uses the verified DTC paid-channel median (BMK-041) as a fallback basis — no verified category AOV was available for this business.');
   }
   if (maturity === 'basic') {
     limitations.push('Automation maturity defaults to BASIC (×1.00) — specify the existing lifecycle stack for a modifier-adjusted estimate.');

@@ -192,6 +192,7 @@ function stripSignals(r: NonNullable<Awaited<ReturnType<typeof researchBusiness>
     reviews: r.reviews,
     quiz: r.quiz,
     revenueOpportunity: r.revenueOpportunity,
+    revenueCalculation: r.revenueCalculation,
     growthAssessment: r.growthAssessment,
     analysis: r.analysis,
   };

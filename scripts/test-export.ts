@@ -74,7 +74,19 @@ check(
   'owner: premium headers present',
   ownerLines[0].includes('SolutionImpact') && ownerLines[0].includes('PriorityChanges')
 );
-check('owner: 11 columns in header', ownerLines[0].split(',').length === 11);
+check(
+  'owner: customer-facing terminology (OnsiteDataCollection, PotentialRevenueLift, RevenueCalculation)',
+  ownerLines[0].includes('OnsiteDataCollection') &&
+    ownerLines[0].includes('PotentialRevenueLift') &&
+    ownerLines[0].includes('RevenueCalculation') &&
+    !ownerLines[0].includes('Quiz') &&
+    !ownerLines[0].includes('RevenueOpportunity')
+);
+check('owner: 12 columns in header', ownerLines[0].split(',').length === 12);
+check(
+  'owner: revenue calculation trail present in row',
+  ownerLines[1].includes('AOV =') || ownerLines[1].includes('Unavailable')
+);
 check(
   'owner: row 1 carries priorityChanges numbered list',
   ownerLines[1].includes('1. Verify traffic in analytics')
@@ -91,6 +103,10 @@ const prospectHeader = prospectCsv.split('\n')[0];
 check(
   'prospect: AngleOfPitch header replaces PriorityChanges',
   prospectHeader.includes('AngleOfPitch') && !prospectHeader.includes('PriorityChanges')
+);
+check(
+  'prospect: customer-facing terminology matches owner',
+  prospectHeader.includes('OnsiteDataCollection') && prospectHeader.includes('PotentialRevenueLift')
 );
 check(
   'prospect: row 1 carries angleOfPitch',
@@ -120,6 +136,9 @@ check('default userType is owner', defaultCsv.split('\n')[0].includes('PriorityC
 const ownerJson = JSON.parse(toJson(rows, 'owner'));
 check('json: disclaimer present', typeof ownerJson.disclaimer === 'string');
 check('json: exportType owner', ownerJson.exportType === 'owner');
+check('json: potentialRevenueLift present', 'potentialRevenueLift' in ownerJson.businesses[0]);
+check('json: onsiteDataCollection present', 'onsiteDataCollection' in ownerJson.businesses[0]);
+check('json: legacy quiz/revenueOpportunity keys removed from customer payload', !('quiz' in ownerJson.businesses[0]) && !('revenueOpportunity' in ownerJson.businesses[0]));
 check(
   'json: owner carries priorityChanges',
   ownerJson.businesses[0].priorityChanges.includes('1. Verify traffic in analytics')

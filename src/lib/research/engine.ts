@@ -7,6 +7,7 @@ import { estimateSearchVisibility } from './serpapi';
 import { estimateTrafficFromSimilarWeb } from './similarweb';
 import { analyzeBusiness } from '../analysis/gemini';
 import { calculateAcrOpportunity } from '../analysis/calculator';
+import { CalculatedMetrics } from '../analysis/types';
 import { BusinessResult, CapturedSignals, UserType } from './types';
 import { compact, toNumber } from './signals';
 
@@ -113,6 +114,13 @@ export async function researchBusiness(
 
   const status: BusinessResult['status'] = hasAnyRealSignal ? 'complete' : 'partial';
 
+  // --- Workspace Potential Revenue Lift ---
+  // The calculator's risk-adjusted combined base scenario is the single
+  // authoritative figure. `analysis.scenarios` (Gemini's interpretive
+  // layer) is no longer the source of the workspace revenue value.
+  const potentialRevenueLift = formatPotentialRevenueLift(calculated);
+  const revenueCalculation = buildRevenueCalculationTrail(calculated);
+
   return {
     domain,
     displayName: brandName ?? company.name ?? domain,
@@ -123,11 +131,86 @@ export async function researchBusiness(
     products,
     reviews,
     quiz,
-    revenueOpportunity: formatRevenueRange(analysis),
+    revenueOpportunity: potentialRevenueLift,
+    revenueCalculation,
     growthAssessment: `${analysis.growthScore} / 100`,
     rawSignals: captured,
     analysis,
   };
+}
+
+/**
+ * Compact Potential Revenue Lift display: risk-adjusted combined base
+ * scenario from the deterministic calculator, e.g. "$8,420/mo".
+ * INSUFFICIENT_DATA is reported honestly — never a fabricated figure.
+ */
+function formatPotentialRevenueLift(calculated: CalculatedMetrics): string {
+  const base = calculated.combined.base;
+  if (base === null || (base.low === 0 && base.high === 0)) {
+    return 'Unavailable';
+  }
+  return `$${base.low.toLocaleString('en-US')}/mo`;
+}
+
+/**
+ * Concise technical calculation trail for the Revenue Calculation column,
+ * built ONLY from calculator-resolved inputs and evidence. Shows the
+ * resolved variables with their evidence tags and the model shape — never
+ * realization factors, maturity modifiers, or the proprietary weighting.
+ */
+function buildRevenueCalculationTrail(calculated: CalculatedMetrics): string {
+  const lines: string[] = [];
+  const i = calculated.inputs;
+
+  // Resolved inputs (compact, evidence-tagged).
+  const fmtMoney = (n: number) => `$${n.toFixed(2)}`;
+  const fmtRate = (n: number) => `${(n * 100).toFixed(n < 0.1 ? 1 : 2).replace(/\.0$/, '')}%`;
+
+  lines.push(`AOV = ${fmtMoney(i.aov.value ?? 0)} [${i.aov.basis}]`);
+  lines.push(`CVR = ${fmtRate(i.conversionRate.value ?? 0)} [${i.conversionRate.basis}]`);
+  if (i.quizParticipation.value !== null) {
+    lines.push(`Data Collection Start = ${fmtRate(i.quizParticipation.value)} [${i.quizParticipation.basis}]`);
+  }
+  if (i.quizCompletion.value !== null) {
+    lines.push(`Completion = ${fmtRate(i.quizCompletion.value)} [${i.quizCompletion.basis}]`);
+  }
+  if (i.quizToPurchase.value !== null) {
+    lines.push(`Purchase = ${fmtRate(i.quizToPurchase.value)} [${i.quizToPurchase.basis}]`);
+  }
+  lines.push(`RPR = ${fmtRate(i.repeatPurchaseRate.value ?? 0)} [${i.repeatPurchaseRate.basis}]`);
+
+  // Model shape — both paths, when they produced numbers.
+  const conv = calculated.conversion.base;
+  const ret = calculated.retention.base;
+  const anyLift = calculated.combined.base !== null;
+
+  if (conv.incrementalUnits !== null) {
+    lines.push('Incremental Buyers = Collection Buyers − Baseline Buyers');
+    lines.push('Glow Lift = Incremental Buyers × AOV');
+  }
+  if (ret.incrementalUnits !== null) {
+    lines.push('Projected RPR = Baseline + ΔRPR × Realization');
+    lines.push('Additional Buyers = Entering × ΔRPR');
+    lines.push('LTV Lift = Additional Buyers × AOV');
+  }
+
+  if (!anyLift) {
+    const missing = calculated.sufficiency.missingInputs;
+    lines.push(
+      missing.length
+        ? `Potential Lift: unavailable — missing ${missing.join(', ')}`
+        : 'Potential Lift: unavailable — insufficient defensible evidence'
+    );
+    return lines.join('\n');
+  }
+
+  // Risk adjustment and result: single composite buffer per MODEL RULES P2.
+  const grossBase = (conv.realizedRevenueLift ?? 0) + (ret.realizedRevenueLift ?? 0);
+  const potential = calculated.combined.base?.low ?? 0;
+  lines.push('Risk Adjustment = Technical + Market + Infrastructure buffer');
+  lines.push(`Potential Lift = $${potential.toLocaleString('en-US')}/mo`);
+  void grossBase;
+  return lines.join('\n');
 }
 
 function buildBenchmarkSignals(input: {
@@ -259,13 +342,6 @@ function formatTrafficForBenchmark(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
   return `${n}`;
-}
-
-function formatRevenueRange(analysis: BusinessResult['analysis']): string {
-  if (!analysis) return 'Unavailable';
-  const base = analysis.scenarios.find((s) => s.label === 'Base') ?? analysis.scenarios[0];
-  if (!base || (base.revenueLow === 0 && base.revenueHigh === 0)) return 'Unavailable';
-  return `$${compact(base.revenueLow)} – $${compact(base.revenueHigh)}`;
 }
 
 function buildRemark(input: {

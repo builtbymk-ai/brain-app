@@ -1495,29 +1495,11 @@ h4 {
   .rw-input-area {
     padding: 20px 16px;
   }
-  /* Stack the 3-field rows vertically on mobile */
+  /* Stack the 3-field rows vertically on mobile. Explicit per-cell grid
+     placement is declared in the second mobile block below — kept in one
+     place so the form layout has a single source of truth. */
   .rw-input-column-heads {
     display: none;
-  }
-  .rw-input-row-3col {
-    grid-template-columns: 1fr 32px;
-    grid-template-areas:
-      'name remove'
-      'url url'
-      'solution solution';
-    gap: 8px;
-  }
-  .rw-input-row-3col input:nth-child(1) {
-    grid-area: name;
-  }
-  .rw-input-row-3col input:nth-child(2) {
-    grid-area: url;
-  }
-  .rw-input-row-3col input:nth-child(3) {
-    grid-area: solution;
-  }
-  .rw-input-row-3col .rw-input-remove {
-    grid-area: remove;
   }
   .rw-input-actions {
     flex-direction: column;
@@ -1552,7 +1534,9 @@ h4 {
   }
 }
 
-/* Mobile: Show inline labels above inputs */
+/* Mobile: Show stacked labels above inputs. Explicit placement — every
+   child gets a definite cell so nothing can overlap or auto-flow into
+   another field's row. */
 @media (max-width: 767px) {
   .rw-input-label {
     display: block;
@@ -1562,27 +1546,24 @@ h4 {
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--turquoise-dark);
-    margin-bottom: 4px;
     padding-left: 2px;
+    align-self: end;
   }
   .rw-input-row-3col {
     grid-template-columns: 1fr 32px;
-    grid-template-areas:
-      'label-name remove'
-      'name name'
-      'label-url url'
-      'url url'
-      'label-solution solution'
-      'solution solution';
-    gap: 4px 8px;
+    gap: 3px 8px;
   }
-  .rw-input-label-name { grid-area: label-name; }
-  .rw-input-label-url { grid-area: label-url; }
-  .rw-input-label-solution { grid-area: label-solution; }
-  .rw-input-row-3col input:nth-child(1) { grid-area: name; }
-  .rw-input-row-3col input:nth-child(2) { grid-area: url; }
-  .rw-input-row-3col input:nth-child(3) { grid-area: solution; }
-  .rw-input-row-3col .rw-input-remove { grid-area: remove; }
+  /* Full-width inputs with deliberate breathing room between fields. */
+  .rw-input-row-3col .rw-input {
+    margin-bottom: 10px;
+  }
+  .rw-input-label-name { grid-column: 1; grid-row: 1; }
+  .rw-input-row-3col .rw-input-remove { grid-column: 2; grid-row: 1; }
+  .rw-input-row-3col input:nth-of-type(1) { grid-column: 1 / -1; grid-row: 2; }
+  .rw-input-label-url { grid-column: 1; grid-row: 3; }
+  .rw-input-row-3col input:nth-of-type(2) { grid-column: 1 / -1; grid-row: 4; }
+  .rw-input-label-solution { grid-column: 1; grid-row: 5; }
+  .rw-input-row-3col input:nth-of-type(3) { grid-column: 1 / -1; grid-row: 6; }
 }
 
 /* Mode badge (workspace header) */
@@ -1612,6 +1593,108 @@ h4 {
 
 .rw-prospect .rw-mode-dot {
   background: var(--deep-teal);
+}
+
+/* Potential Revenue Lift: honest unavailable state — the calculator refused
+   to produce a number because required evidence was missing. Explains the
+   state instead of a bare word. */
+.rw-cell-unavailable {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 140px;
+}
+
+/* Revenue Calculation: compact deterministic calculation trail with
+   evidence tags. Monospaced-leaning presentation for technical readability. */
+.rw-cell-calc {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.68rem;
+  line-height: 1.55;
+  color: var(--muted);
+  white-space: pre-line;
+  max-width: 260px;
+  min-width: 200px;
+}
+
+.rw-cell-unavailable-note {
+  font-family: var(--font-sans);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+/* Evidence Guide — compact collapsible explainer for the evidence tags.
+   Deliberately understated so it never competes with the form. */
+.evidence-guide {
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.evidence-guide-summary {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-sans);
+}
+
+.evidence-guide-summary::-webkit-details-marker {
+  display: none;
+}
+
+.evidence-guide-summary:hover .evidence-guide-title {
+  color: var(--turquoise-dark);
+}
+
+.evidence-guide-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--deep-teal);
+}
+
+.evidence-guide-tags {
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.evidence-guide-list {
+  margin: 12px 0 0;
+  display: grid;
+  gap: 10px;
+}
+
+.evidence-guide-item dt {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--deep-teal);
+  margin-bottom: 2px;
+}
+
+.evidence-guide-item dd {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* On mobile the tag list wraps under the title; keep the guide compact. */
+@media (max-width: 767px) {
+  .evidence-guide-summary {
+    flex-wrap: wrap;
+  }
+  .evidence-guide-item dd {
+    font-size: 0.76rem;
+  }
 }
 
 /* Solution-fit cell (prospect mode results) */
@@ -1777,4 +1860,80 @@ h4 {
     padding: 6px 12px;
     gap: 6px;
   }
+}
+
+/* ============================================================
+   Documentation page (/docs)
+   ============================================================ */
+.docs-page {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.docs-section {
+  margin-top: clamp(40px, 6vw, 64px);
+}
+
+.docs-heading {
+  font-family: var(--font-serif-display);
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  color: var(--deep-teal);
+  margin-bottom: 14px;
+}
+
+.docs-copy {
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: var(--ink);
+  margin-bottom: 12px;
+  max-width: 62ch;
+}
+
+.docs-copy strong {
+  color: var(--deep-teal);
+}
+
+.docs-list {
+  margin: 12px 0 16px;
+  padding-left: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.docs-list li {
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.docs-list strong {
+  color: var(--deep-teal);
+}
+
+.docs-evidence-list {
+  margin-top: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.docs-footer-note {
+  margin-top: clamp(36px, 5vw, 56px);
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.docs-cta {
+  display: inline-block;
+  margin-top: 16px;
+  margin-bottom: clamp(48px, 8vw, 80px);
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--turquoise-dark);
 }

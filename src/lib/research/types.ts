@@ -38,8 +38,12 @@ export interface BusinessResult {
   monthlyTraffic: string;
   products: string;
   reviews: string;
+  /** On-site data collection detection result (display value). */
   quiz: string;
+  /** Compact Potential Revenue Lift, e.g. "$8,420/mo", or "Unavailable". */
   revenueOpportunity: string;
+  /** Concise evidence-tagged calculation trail for the Revenue Calculation column. */
+  revenueCalculation?: string;
   growthAssessment: string;
   rawSignals: CapturedSignals;
   analysis: AnalysisResult | null;

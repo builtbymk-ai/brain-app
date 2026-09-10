@@ -15,6 +15,7 @@ interface ResearchResult {
   reviews: string;
   quiz: string;
   revenueOpportunity: string;
+  revenueCalculation?: string;
   growthAssessment: string;
   analysis?: {
     solutionFit?: string | null;
@@ -254,8 +255,8 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
   };
 
   const entityLabel = userType === 'owner' ? 'Brand' : 'Prospect';
-  // 8 base columns + mode premium column + Solution Impact = 10 columns.
-  const displayedColumns = 10;
+  // 9 base columns + mode premium column = 11 columns.
+  const displayedColumns = 11;
   const premiumKey = userType === 'owner' ? 'priorityChanges' : 'angleOfPitch';
   const premiumHead =
     userType === 'owner' ? 'Priority Changes' : 'Angle of Pitch';
@@ -373,6 +374,46 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
               </button>
             </div>
             <p className="rw-input-note">{mode.helperNote}</p>
+
+            {/* Evidence Guide — compact, collapsible; explains the evidence
+                tags used throughout results and exports. */}
+            <details className="evidence-guide">
+              <summary className="evidence-guide-summary">
+                <span aria-hidden="true">ⓘ</span>
+                <span className="evidence-guide-title">Evidence Guide</span>
+                <span className="evidence-guide-tags">OBS · EST · BMK · ASM · DRV</span>
+              </summary>
+              <dl className="evidence-guide-list">
+                <div className="evidence-guide-item">
+                  <dt>OBS — Observed</dt>
+                  <dd>Directly captured or declared business data.</dd>
+                </div>
+                <div className="evidence-guide-item">
+                  <dt>EST — Estimated</dt>
+                  <dd>Externally estimated data, such as SimilarWeb traffic.</dd>
+                </div>
+                <div className="evidence-guide-item">
+                  <dt>BMK — Benchmark</dt>
+                  <dd>Validated external industry/reference data.</dd>
+                </div>
+                <div className="evidence-guide-item">
+                  <dt>ASM — Assumption</dt>
+                  <dd>An explicit modelling assumption used where appropriate.</dd>
+                </div>
+                <div className="evidence-guide-item">
+                  <dt>DRV — Derived</dt>
+                  <dd>Calculated from other evidence.</dd>
+                </div>
+                <div className="evidence-guide-item">
+                  <dt>INSUFFICIENT DATA</dt>
+                  <dd>BRAIN does not have enough defensible evidence to calculate the metric.</dd>
+                </div>
+              </dl>
+              <p className="evidence-guide-docs-link">
+                Benchmark references and source methodology →{' '}
+                <Link href="/docs">Documentation</Link>
+              </p>
+            </details>
           </div>
 
           {/* Error */}
@@ -414,8 +455,9 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
                         <th scope="col">Monthly Traffic</th>
                         <th scope="col">Products</th>
                         <th scope="col">Reviews</th>
-                        <th scope="col">Quiz</th>
-                        <th scope="col">Revenue Opportunity</th>
+                        <th scope="col">On-site Data Collection</th>
+                        <th scope="col">Potential Revenue Lift</th>
+                        <th scope="col">Revenue Calculation</th>
                         <th scope="col">Growth Assessment</th>
                         <th scope="col">Solution Impact</th>
                         <th scope="col">{premiumHead}</th>
@@ -442,7 +484,25 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
                           <td>{r.products}</td>
                           <td>{r.reviews}</td>
                           <td>{r.quiz}</td>
-                          <td>{r.revenueOpportunity}</td>
+                          <td className="td-bold">
+                            {r.revenueOpportunity === 'Unavailable' ? (
+                              <span className="rw-cell-unavailable">
+                                Unavailable
+                                <span className="rw-cell-unavailable-note">
+                                  Insufficient business evidence
+                                </span>
+                              </span>
+                            ) : (
+                              <span title="Modeled opportunity estimate — not guaranteed revenue">
+                                {r.revenueOpportunity}
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            <span className="rw-cell-calc" title="Deterministic ACR calculation — see Documentation for provenance">
+                              {r.revenueCalculation || '—'}
+                            </span>
+                          </td>
                           <td>{r.growthAssessment}</td>
                           <td>
                             <span className="rw-cell-fit" title={r.analysis?.solutionImpact ?? ''}>

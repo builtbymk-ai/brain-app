@@ -95,9 +95,11 @@ function getAllFiles(dir: string, files: string[] = []): string[] {
   for (const entry of entries) {
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name === "node_modules" || entry.name === ".next" || entry.name === ".git" || entry.name === "dist") continue;
+      if (entry.name === "node_modules" || entry.name === ".next" || entry.name === ".git" || entry.name === "dist" || entry.name === ".turbo") continue;
       getAllFiles(fullPath, files);
     } else {
+      // Never push environment/secret files
+      if (entry.name.startsWith(".env")) continue;
       files.push(fullPath);
     }
   }
@@ -190,7 +192,7 @@ async function main() {
   console.log(`Tree SHA: ${treeSha.slice(0, 12)}`);
 
   // Create commit
-  const commitMsg = "feat: mobile-first UI overhaul with SimilarWeb traffic and provenance tracking\n\nUI/UX:\n- Mobile-first responsive overhaul with clamp() spacing system\n- Mobile research input labels visibility\n- Alternating row colors in spreadsheet preview\n- Support loop text repositioned under spreadsheet\n- Zero page-level horizontal overflow at 320px-430px\n\nBackend:\n- SimilarWeb monthly traffic estimation via Apify\n- [OBS]/[EST] traffic provenance classification\n- OpenRouter as secondary AI provider fallback";
+  const commitMsg = "feat: V1 ACR Revenue Opportunity Model — benchmark-based Potential Revenue Lift\n\nCalculator (deterministic, remains authoritative):\n- Evidence hierarchy resolution: OBS > EST > verified BMK > explicit ASM > DRV\n- AOV: category benchmark (BMK-043…048) with BMK-041 $61.22 ASM fallback\n- Baseline CVR: BMK-001 2.66% global / BMK-002 5.39% beauty [BMK]\n- Baseline RPR: BMK-017 29% / BMK-015 28.2% [BMK]\n- On-site data collection funnel: repo-documented ASM bands (§27), BMK-075 stays unverified\n- Customers Entering proxy = traffic x resolved CVR [DRV] when no observed buyers\n- Fixed genuine defect: baseline buyers never subtracted from quiz purchases\n- Risk buffer exposed as single composite (no false 3-way decomposition claim)\n\nResearch engine:\n- Potential Revenue Lift from risk-adjusted combined.base (no Gemini arithmetic)\n- Server-side revenue calculation trail with provenance labels\n\nUI (11-column workspace, Owner + Prospect):\n- Potential Revenue Lift (compact) + Revenue Calculation trail columns\n- Quiz column renamed On-site Data Collection\n- Evidence Guide with /docs methodology page\n\nExport:\n- CSV/JSON headers updated; internal field names preserved\n\nTests:\n- Calculator suite rewritten + 6 required coverage cases (all passing)\n- Export suite updated for new schema (all passing)";
 
   console.log("\nCreating commit...");
   const commitSha = await createCommit(commitMsg, treeSha, baseSha || "");

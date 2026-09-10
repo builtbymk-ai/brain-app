@@ -63,6 +63,35 @@ export function effectiveRealization(
 }
 
 // ---------------------------------------------------------------------------
+// P4a — On-site Data Collection funnel assumptions (ASM)
+// ---------------------------------------------------------------------------
+
+/**
+ * Explicit modelling assumptions for the On-site Data Collection funnel
+ * (quizzes, forms, product finders, surveys, preference/newsletter capture)
+ * when no business-specific funnel data is observable.
+ *
+ * SOURCE OF VALUES: src/lib/analysis/benchmark.txt Section 27 —
+ * "Benchmarks not yet hard-coded": Quiz participation 3%/5%/8%; skincare
+ * quiz-to-purchase 8%/12%/18%. These are documented V1 working assumptions,
+ * NOT validated benchmarks — they are labelled [ASM] everywhere they appear
+ * and must never be presented as market data or [BMK].
+ *
+ * Tuning these values changes model behaviour only; it does not touch the
+ * benchmark library (R6: unverified records can never masquerade as BMK).
+ */
+export const DATA_COLLECTION_ASSUMPTIONS = {
+  /** Share of monthly visitors who start a data-collection flow, per scenario. */
+  participation: { conservative: 0.03, base: 0.05, upside: 0.08 } as Record<ScenarioKey, number>,
+  /** Share of flow starters who convert to purchase, per scenario. */
+  purchase: { conservative: 0.08, base: 0.12, upside: 0.18 } as Record<ScenarioKey, number>,
+} as const;
+
+/** Provenance string used in ledgers/exports for these ASM values. */
+export const DATA_COLLECTION_ASM_NOTE =
+  '[ASM] Documented V1 working assumption (benchmark.txt Section 27) — not a validated benchmark';
+
+// ---------------------------------------------------------------------------
 // P4 — Data sufficiency
 // ---------------------------------------------------------------------------
 
@@ -113,7 +142,16 @@ export function guardAdditionalRepeatBuyers(value: number): number {
 // Risk-adjustment procedure (P2 + R1)
 // ---------------------------------------------------------------------------
 
-/** Raw opportunity × (1 − risk buffer), rounded to whole dollars. */
+/**
+ * Raw opportunity × (1 − risk buffer), rounded to whole dollars.
+ *
+ * RISK-MODEL NOTE: the scenario buffer is a SINGLE composite haircut for
+ * model error. It is NOT decomposed into separate technical / market /
+ * infrastructure failure categories — no such derivation exists in the
+ * codebase or MODEL RULES. UI copy must therefore present only:
+ * Gross Lift → Risk Adjustment → Potential Lift, never a claim of three
+ * distinct deductions.
+ */
 export function riskAdjusted(value: number, scenario: ScenarioKey): number {
   return Math.round(value * (1 - RISK_BUFFERS[scenario]));
 }
