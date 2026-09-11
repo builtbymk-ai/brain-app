@@ -6,6 +6,7 @@ import { enrichCompany } from './apollo';
 import { estimateSearchVisibility } from './serpapi';
 import { estimateTrafficFromSimilarWeb } from './similarweb';
 import { analyzeBusiness } from '../analysis/gemini';
+import { classifyProposedSolution } from '../analysis/solution-classifier';
 import { calculateAcrOpportunity } from '../analysis/calculator';
 import { CalculatedMetrics } from '../analysis/types';
 import { BusinessResult, CapturedSignals, UserType } from './types';
@@ -92,12 +93,18 @@ export async function researchBusiness(
     ...(website?.description ? [website.description] : []),
   ];
 
+  // Deterministic MODEL-ACTIVATION classification of the proposed solution.
+  // Runs BEFORE the calculator; the calculator receives only the boolean
+  // result — never the raw solution text (and never performs arithmetic on it).
+  const solutionClassification = classifyProposedSolution(proposedSolution);
+
   const calculated = calculateAcrOpportunity(
     {
       domain,
       displayName: brandName ?? company.name ?? domain,
       industrySignals,
       hasQuiz: website ? website.hasQuiz : null,
+      solutionActivatesDataCollection: solutionClassification.activatesDataCollection,
     },
     aggregate.traffic,
     { userType, trafficSource }
@@ -142,13 +149,17 @@ export async function researchBusiness(
 /**
  * Compact Potential Revenue Lift display: risk-adjusted combined base
  * scenario from the deterministic calculator, e.g. "$8,420/mo".
- * INSUFFICIENT_DATA is reported honestly — never a fabricated figure.
+ *
+ * Zero-vs-unavailable semantics (typed, not string-matched):
+ *   combined.base === null                          → unavailable (no pathway ran)
+ *   combined.base = {low: 0, high: 0}               → "$0/mo" (a calculated zero)
+ *   any positive figure                             → "$X/mo"
+ * A legitimate calculated zero is never converted to "Unavailable", and
+ * missing evidence is never presented as "$0/mo".
  */
 function formatPotentialRevenueLift(calculated: CalculatedMetrics): string {
   const base = calculated.combined.base;
-  if (base === null || (base.low === 0 && base.high === 0)) {
-    return 'Unavailable';
-  }
+  if (base === null) return 'Unavailable';
   return `$${base.low.toLocaleString('en-US')}/mo`;
 }
 
@@ -182,7 +193,7 @@ function buildRevenueCalculationTrail(calculated: CalculatedMetrics): string {
   // Model shape — both paths, when they produced numbers.
   const conv = calculated.conversion.base;
   const ret = calculated.retention.base;
-  const anyLift = calculated.combined.base !== null;
+  const combinedBase = calculated.combined.base;
 
   if (conv.incrementalUnits !== null) {
     lines.push('Incremental Buyers = Collection Buyers − Baseline Buyers');
@@ -194,7 +205,10 @@ function buildRevenueCalculationTrail(calculated: CalculatedMetrics): string {
     lines.push('LTV Lift = Additional Buyers × AOV');
   }
 
-  if (!anyLift) {
+  // Unavailable: no pathway produced a calculable figure (combined is the
+  // typed null state). A calculated zero still falls through to the trail
+  // below and prints "$0/mo" — never "Unavailable" (zero ≠ unavailable).
+  if (combinedBase === null) {
     const missing = calculated.sufficiency.missingInputs;
     lines.push(
       missing.length
@@ -204,12 +218,14 @@ function buildRevenueCalculationTrail(calculated: CalculatedMetrics): string {
     return lines.join('\n');
   }
 
-  // Risk adjustment and result: single composite buffer per MODEL RULES P2.
+  // Risk adjustment and result. Per MODEL RULES P2 the buffer is ONE
+  // composite haircut for model error — never presented as three separate
+  // technical/market/infrastructure deductions (V1 audit finding).
   const grossBase = (conv.realizedRevenueLift ?? 0) + (ret.realizedRevenueLift ?? 0);
-  const potential = calculated.combined.base?.low ?? 0;
-  lines.push('Risk Adjustment = Technical + Market + Infrastructure buffer');
+  const potential = combinedBase.low;
+  lines.push(`Gross Lift = $${grossBase.toLocaleString('en-US')}/mo`);
+  lines.push(`Risk Adjustment = −$${(grossBase - potential).toLocaleString('en-US')}`);
   lines.push(`Potential Lift = $${potential.toLocaleString('en-US')}/mo`);
-  void grossBase;
   return lines.join('\n');
 }
 

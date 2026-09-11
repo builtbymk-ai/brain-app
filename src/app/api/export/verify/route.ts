@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db, schema } from '@/db/client';
-import { verifyTransaction } from '@/lib/paystack';
+import { verifyCheckoutSession } from '@/lib/bachs';
 import { toCsv, toJson, ExportRowPayload } from '@/lib/export/serialize';
 import { uploadFile, createDownloadUrl, isR2Configured } from '@/lib/r2';
 import { generateId } from '@/lib/id';
@@ -10,23 +10,45 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 /**
- * Verify the payment server-side against Paystack before unlocking the export.
- * Only after the backend confirms `paid` do we generate and serve the file.
+ * Verify the payment server-side against Bachs before unlocking the export.
+ * The browser supplies only the BRAIN reference; the authoritative payment
+ * state comes from Bachs' own checkout-session endpoint (payment_status),
+ * never from browser parameters. Only after Bachs confirms `succeeded` do we
+ * generate and serve the file.
  */
 export async function POST(request: Request) {
-  let body: { reference?: string };
+  let body: { reference?: string; checkoutId?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { reference } = body;
-  if (!reference) {
+  const { reference, checkoutId } = body;
+  if (!reference && !checkoutId) {
     return NextResponse.json({ error: 'Missing payment reference' }, { status: 400 });
   }
 
-  const verification = await verifyTransaction(reference);
+  // Look up the transaction by BRAIN reference (the browser never provides amounts).
+  const transaction = reference
+    ? await db.query.exportTransactions.findFirst({
+        where: eq(schema.exportTransactions.transactionRef, reference),
+      })
+    : null;
+
+  if (!transaction) {
+    return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
+  }
+
+  const sessionIdForBachs = checkoutId ?? extractCheckoutId(transaction.authorizationUrl);
+  if (!sessionIdForBachs) {
+    return NextResponse.json(
+      { error: 'Payment could not be verified. Try again or contact support.' },
+      { status: 502 }
+    );
+  }
+
+  const verification = await verifyCheckoutSession(sessionIdForBachs);
   if (!verification) {
     return NextResponse.json(
       { error: 'Payment could not be verified. Try again or contact support.' },
@@ -41,12 +63,18 @@ export async function POST(request: Request) {
     );
   }
 
-  // Load the transaction and its session.
-  const transaction = await db.query.exportTransactions.findFirst({
-    where: eq(schema.exportTransactions.transactionRef, reference),
-  });
-  if (!transaction) {
-    return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
+  // Server-side amount check: what Bachs actually collected must match
+  // the authorized export price (150 cents = $1.50).
+  const collected = Math.round(Number(verification.amount) * 100);
+  if (Number.isFinite(collected) && collected > 0 && collected !== transaction.amount) {
+    await db
+      .update(schema.exportTransactions)
+      .set({ paymentStatus: 'failed', updatedAt: new Date() })
+      .where(eq(schema.exportTransactions.id, transaction.id));
+    return NextResponse.json(
+      { error: 'Payment amount mismatch. Export remains locked.' },
+      { status: 402 }
+    );
   }
 
   // The export's premium column follows the session's research mode.
@@ -88,16 +116,21 @@ export async function POST(request: Request) {
       await uploadFile(key, Buffer.from(csv, 'utf-8'), 'text/csv; charset=utf-8');
       const downloadUrl = await createDownloadUrl(key, 3600);
 
-      await db
-        .update(schema.exportTransactions)
-        .set({
-          exportStatus: 'unlocked',
-          paymentStatus: 'paid',
-          exportObjectKey: key,
-          exportDownloadUrl: downloadUrl,
-          updatedAt: new Date(),
-        })
-        .where(eq(schema.exportTransactions.id, transaction.id));
+      // Idempotent unlock: only flip the record when it is not already paid
+      // and unlocked, so repeated verification cannot duplicate entitlement.
+      const alreadyUnlocked = transaction.paymentStatus === 'paid' && transaction.exportStatus === 'unlocked';
+      if (!alreadyUnlocked) {
+        await db
+          .update(schema.exportTransactions)
+          .set({
+            exportStatus: 'unlocked',
+            paymentStatus: 'paid',
+            exportObjectKey: key,
+            exportDownloadUrl: downloadUrl,
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.exportTransactions.id, transaction.id));
+      }
 
       return NextResponse.json({ status: 'paid', downloadUrl, format: 'csv', filename: key.split('/').pop() });
     }
@@ -109,5 +142,20 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Export generation failed:', error);
     return NextResponse.json({ error: 'Export generation failed. Please retry.' }, { status: 500 });
+  }
+}
+
+/**
+ * Recover the Bachs checkout id from the stored checkout URL when the client
+ * only knows the BRAIN reference. Bachs hosted URLs end in the checkout token.
+ */
+function extractCheckoutId(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    return segments.length ? segments[segments.length - 1] : null;
+  } catch {
+    return null;
   }
 }

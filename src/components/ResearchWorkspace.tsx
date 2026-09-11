@@ -152,7 +152,7 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
     setExportState('paying');
 
     try {
-      // Step 1: Initialize checkout
+      // Step 1: Initialize checkout (amount is fixed server-side)
       const createRes = await fetch('/api/export/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -167,37 +167,38 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
         return;
       }
 
-      // Step 2: Open Paystack popup
-      if (typeof window !== 'undefined' && createData.accessCode) {
+      // Step 2: Open the Bachs overlay checkout (hosted page in a modal).
+      // The browser event only drives UI — the server-side webhook/verification
+      // is the source of truth that actually unlocks the export.
+      if (typeof window !== 'undefined' && createData.checkoutUrl) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const handler = (window as any).PaystackPop?.setup as
-          | ((config: Record<string, unknown>) => { openIframe: () => void })
-          | undefined;
+        const Bachs = (window as any).Bachs;
 
-        if (handler) {
-          const paystack = handler({
-            key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
-            email: email || 'buyer@brain.local',
-            amount: createData.amount,
-            currency: createData.currency,
-            ref: createData.reference,
-            onClose: () => {
-              setExportState('idle');
-            },
-            callback: async (response: { reference: string }) => {
-              await verifyPayment(response.reference);
+        if (Bachs?.Checkout?.open) {
+          // One-time SDK initialization (required before open()).
+          if (!Bachs.__brainInitialized) {
+            Bachs.Initialize({ onEvent: () => {} });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (Bachs as any).__brainInitialized = true;
+          }
+          Bachs.Checkout.open({
+            checkoutUrl: createData.checkoutUrl,
+            onEvent: (event: { type: string }) => {
+              if (event.type === 'checkout.completed') {
+                verifyPayment(createData.reference);
+              }
+              if (event.type === 'checkout.closed' || event.type === 'checkout.expired') {
+                setExportState('idle');
+              }
             },
           });
-          paystack.openIframe();
         } else {
-          // Fallback: redirect to authorization URL
-          if (createData.authorizationUrl) {
-            window.location.href = createData.authorizationUrl;
-          } else {
-            setError('Paystack checkout is not available. Please try again later.');
-            setExportState('error');
-          }
+          // Fallback: full-page redirect to the hosted checkout
+          window.location.href = createData.checkoutUrl;
         }
+      } else {
+        setError('Bachs checkout is not available. Please try again later.');
+        setExportState('error');
       }
     } catch {
       setError('Export initialization failed. Please try again.');
@@ -582,7 +583,7 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
                       </button>
                     </div>
                     <p className="rw-export-note">
-                      Payment is processed securely via Paystack. Your export will be
+                      Payment is processed securely via Bachs. Your export will be
                       available for download immediately after payment.
                     </p>
                   </div>
@@ -616,8 +617,8 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
         </div>
       </main>
 
-      {/* Paystack Script */}
-      <script src="https://js.paystack.co/v1/inline.js" async />
+      {/* Bachs overlay checkout SDK */}
+      <script src="https://checkout.bachs.io/bachs.js" async />
     </div>
   );
 }

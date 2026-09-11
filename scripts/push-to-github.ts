@@ -95,11 +95,12 @@ function getAllFiles(dir: string, files: string[] = []): string[] {
   for (const entry of entries) {
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name === "node_modules" || entry.name === ".next" || entry.name === ".git" || entry.name === "dist" || entry.name === ".turbo") continue;
+      if (entry.name === "node_modules" || entry.name === ".next" || entry.name === ".git" || entry.name === "dist" || entry.name === ".turbo" || entry.name === ".qa" || entry.name === ".freebuff") continue;
       getAllFiles(fullPath, files);
     } else {
-      // Never push environment/secret files
+      // Never push environment/secret files or build artifacts
       if (entry.name.startsWith(".env")) continue;
+      if (entry.name.endsWith(".tsbuildinfo")) continue;
       files.push(fullPath);
     }
   }
@@ -192,7 +193,7 @@ async function main() {
   console.log(`Tree SHA: ${treeSha.slice(0, 12)}`);
 
   // Create commit
-  const commitMsg = "feat: V1 ACR Revenue Opportunity Model — benchmark-based Potential Revenue Lift\n\nCalculator (deterministic, remains authoritative):\n- Evidence hierarchy resolution: OBS > EST > verified BMK > explicit ASM > DRV\n- AOV: category benchmark (BMK-043…048) with BMK-041 $61.22 ASM fallback\n- Baseline CVR: BMK-001 2.66% global / BMK-002 5.39% beauty [BMK]\n- Baseline RPR: BMK-017 29% / BMK-015 28.2% [BMK]\n- On-site data collection funnel: repo-documented ASM bands (§27), BMK-075 stays unverified\n- Customers Entering proxy = traffic x resolved CVR [DRV] when no observed buyers\n- Fixed genuine defect: baseline buyers never subtracted from quiz purchases\n- Risk buffer exposed as single composite (no false 3-way decomposition claim)\n\nResearch engine:\n- Potential Revenue Lift from risk-adjusted combined.base (no Gemini arithmetic)\n- Server-side revenue calculation trail with provenance labels\n\nUI (11-column workspace, Owner + Prospect):\n- Potential Revenue Lift (compact) + Revenue Calculation trail columns\n- Quiz column renamed On-site Data Collection\n- Evidence Guide with /docs methodology page\n\nExport:\n- CSV/JSON headers updated; internal field names preserved\n\nTests:\n- Calculator suite rewritten + 6 required coverage cases (all passing)\n- Export suite updated for new schema (all passing)";
+  const commitMsg = "feat: Bachs payment migration + counterfactual ACR activation\n\nPayment provider migration (Paystack -> Bachs.io):\n- src/lib/bachs.ts provider module: hosted checkout sessions, server-side\n  verification, HMAC-SHA256 webhook signature verification\n- /api/bachs/webhook: source-of-truth fulfilment (raw-body signature check,\n  300s timestamp tolerance, event-id dedupe, idempotent entitlement updates)\n- Export create/verify routes rewired; BRAIN reference maps Bachs payments\n  to exportTransactions; amount fixed server-side ($1.50 decimal string)\n- bachs.js overlay checkout in the workspace UI; success page verifies\n  server-side (return URL never grants entitlement)\n- Paystack code/env/scripts removed; BACHS_* env vars are server-side only\n- tests/test-bachs.ts: 24 payment QA cases (signatures, idempotency, amounts)\n\nACR counterfactual solution activation:\n- Deterministic solution classifier maps proposed solutions (quiz, routine\n  creator, zero-party data capture...) to model activation — no LLM, no\n  arithmetic; proposedSolution text never enters the calculator\n- Collection funnel activates on observed mechanism OR proposed-solution\n  counterfactual; provenance records observed/counterfactual/none\n- Retention path honestly unavailable when resolved baseline equals the\n  verified ceiling (no fabricated 29->29 gap)\n- Sufficiency reflects pathway evidence; true calculated zero survives as\n  $0/mo while insufficient evidence stays Unavailable\n- Revenue trail corrected to single composite risk buffer\n- Calculator suite: 129 cases incl. AI Skincare Routine Creator acceptance";
 
   console.log("\nCreating commit...");
   const commitSha = await createCommit(commitMsg, treeSha, baseSha || "");

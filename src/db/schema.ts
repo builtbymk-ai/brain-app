@@ -57,9 +57,9 @@ export const exportTransactions = pgTable('export_transactions', {
   sessionId: text('session_id').references(() => researchSessions.id, {
     onDelete: 'set null',
   }),
-  /** paystack reference/transaction id */
+  /** payment provider reference/transaction id (BRAIN-generated, sent as the Bachs `reference`) */
   transactionRef: text('transaction_ref'),
-  /** paystack access_code / authorization url for the checkout */
+  /** hosted checkout URL (Bachs checkout_url) for the payment */
   authorizationUrl: text('authorization_url'),
   amount: integer('amount').notNull(),
   currency: text('currency').notNull(),

@@ -189,42 +189,57 @@ function resolveInputs(
         : insufficient('Baseline conversion rate', 'no observed value and no validated benchmark available');
 
   // --- Quiz funnel ---
+  // Activation condition (forensic-fix): the collection funnel may be modelled
+  // when an on-site mechanism is OBSERVED (hasQuiz === true) OR when the
+  // PROPOSED SOLUTION explicitly creates one (counterfactual activation).
+  // hasQuiz and solutionActivatesDataCollection are different concepts and
+  // must never be conflated: the observed state stays labelled [OBS]; the
+  // counterfactual is always presented as a MODELLED opportunity.
+  const collectionMechanismActive =
+    research.hasQuiz === true || research.solutionActivatesDataCollection === true;
+
   const completionBench = QUIZ_BENCHMARKS.find((b) => b.id === 'BMK-074');
   let quizCompletion: ResolvedInput;
-  if (research.hasQuiz === true) {
+  if (collectionMechanismActive) {
     if (completionBench && canDriveRevenueMath(completionBench.verification)) {
       quizCompletion = benchmarkInput(completionBench, 'Quiz completion rate', 'V1 range (50/65/80) base value applied as labelled benchmark assumption');
       benchmarksUsed.push(toApplied(completionBench, 'Quiz completion rate for Glow Curator path'));
       assumptions.push({
         key: 'quizCompletion',
         value: '65% (base scenario value)',
-        note: 'BENCHMARK 074 V1 range used as [ASM]-labelled benchmark assumption — not observed business data.',
+        note: 'BENCHMARK 074 V1 range used as [ASM]-labelled benchmark assumption — not observed business data. Low/high completion scenarios are not independently configured; the single verified 65% base value applies to all scenarios.',
       });
     } else {
       quizCompletion = insufficient('Quiz completion rate', 'no verified benchmark available');
     }
   } else {
-    quizCompletion = insufficient('Quiz completion rate', research.hasQuiz === false ? 'no quiz found on the site' : 'quiz presence undetermined');
+    quizCompletion = insufficient('Quiz completion rate', research.hasQuiz === false ? 'no quiz found on the site and the proposed solution does not create a data-collection mechanism' : 'quiz presence undetermined');
   }
 
   // On-site Data Collection participation: scenario-banded explicit [ASM]
   // (documented V1 working assumption, benchmark.txt Section 27) when a
-  // collection mechanism is present. BMK-075 is unverified and is NEVER used
-  // or labelled as a benchmark (R6).
+  // collection mechanism is present — observed on the site or created by the
+  // proposed solution. BMK-075 is unverified and is NEVER used or labelled as
+  // a benchmark (R6).
   let quizParticipation: ResolvedInput;
-  if (research.hasQuiz === true) {
+  if (collectionMechanismActive) {
+    const counterfactual = research.hasQuiz !== true && research.solutionActivatesDataCollection === true;
     quizParticipation = {
       value: DATA_COLLECTION_ASSUMPTIONS.participation.base,
       basis: 'ASM',
-      provenance: `[ASM] Data-collection start rate — 3%/5%/8% scenario band (base shown), documented V1 working assumption (benchmark.txt Section 27). Not a validated benchmark.`,
+      provenance: counterfactual
+        ? `[ASM] Data-collection start rate — 3%/5%/8% scenario band (base shown), documented V1 working assumption (benchmark.txt Section 27). Not a validated benchmark. COUNTERFACTUAL: applied to the collection mechanism created by the proposed solution — the business does not currently operate one [OBS hasQuiz=false].`
+        : `[ASM] Data-collection start rate — 3%/5%/8% scenario band (base shown), documented V1 working assumption (benchmark.txt Section 27). Not a validated benchmark.`,
     };
     assumptions.push({
       key: 'dataCollectionParticipation',
       value: '3% / 5% / 8% (conservative / base / upside)',
-      note: DATA_COLLECTION_ASM_NOTE,
+      note: counterfactual
+        ? `${DATA_COLLECTION_ASM_NOTE} — applied as a counterfactual to the mechanism the proposed solution would create.`
+        : DATA_COLLECTION_ASM_NOTE,
     });
   } else if (research.hasQuiz === false) {
-    quizParticipation = insufficient('Data-collection start rate', 'no on-site data collection mechanism was found on the site');
+    quizParticipation = insufficient('Data-collection start rate', 'no on-site data collection mechanism was found on the site and the proposed solution does not create one');
   } else {
     quizParticipation = insufficient('Data-collection start rate', 'presence of on-site data collection undetermined');
   }
@@ -233,22 +248,27 @@ function resolveInputs(
   // [ASM] from the same documented source. R4 discipline preserved: purchase
   // conversion is never inferred from completion.
   let quizToPurchase: ResolvedInput;
-  if (research.hasQuiz === true) {
+  if (collectionMechanismActive) {
+    const counterfactual = research.hasQuiz !== true && research.solutionActivatesDataCollection === true;
     quizToPurchase = {
       value: DATA_COLLECTION_ASSUMPTIONS.purchase.base,
       basis: 'ASM',
-      provenance: `[ASM] Data-collection purchase rate — 8%/12%/18% scenario band (base shown), documented V1 working assumption (benchmark.txt Section 27). Not a validated benchmark.`,
+      provenance: counterfactual
+        ? `[ASM] Data-collection purchase rate — 8%/12%/18% scenario band (base shown), documented V1 working assumption (benchmark.txt Section 27). Not a validated benchmark. COUNTERFACTUAL: applied to the collection mechanism created by the proposed solution.`
+        : `[ASM] Data-collection purchase rate — 8%/12%/18% scenario band (base shown), documented V1 working assumption (benchmark.txt Section 27). Not a validated benchmark.`,
     };
     assumptions.push({
       key: 'dataCollectionPurchase',
       value: '8% / 12% / 18% (conservative / base / upside)',
-      note: DATA_COLLECTION_ASM_NOTE,
+      note: counterfactual
+        ? `${DATA_COLLECTION_ASM_NOTE} — applied as a counterfactual to the mechanism the proposed solution would create.`
+        : DATA_COLLECTION_ASM_NOTE,
     });
   } else {
     quizToPurchase = insufficient(
       'Data-collection purchase rate',
       research.hasQuiz === false
-        ? 'no on-site data collection mechanism exists on the site'
+        ? 'no on-site data collection mechanism exists on the site and the proposed solution does not create one'
         : 'presence of on-site data collection undetermined'
     );
   }
@@ -266,8 +286,8 @@ function resolveInputs(
 
   const highRprBench = selectBenchmarkHighRpr(industry);
   let benchmarkHighRpr: ResolvedInput;
-  if (canDriveRevenueMath(highRprBench.verification)) {
-    benchmarkHighRpr = benchmarkInput(highRprBench, 'Benchmark high RPR', 'verified Shopify repeat-purchase reference for the theoretical RPR gap');
+  if (highRprBench && canDriveRevenueMath(highRprBench.verification)) {
+    benchmarkHighRpr = benchmarkInput(highRprBench, 'Benchmark high RPR', 'verified repeat-purchase reference for the theoretical RPR-gap ceiling');
     benchmarksUsed.push(toApplied(highRprBench, 'Benchmark high RPR for the LTV System theoretical gap'));
   } else {
     benchmarkHighRpr = insufficient('Benchmark high RPR', 'no verified retention benchmark available');
@@ -468,7 +488,24 @@ function calculateRetentionPath(
   }
 
   const baselineRpr = repeatPurchaseRate.value as number;
-  const highRpr = benchmarkHighRpr.value as number;
+  const highRpr = (benchmarkHighRpr as ResolvedInput).value as number;
+
+  // Degenerate-gap guard (forensic-audit fix): when the resolved baseline
+  // already sits at or above the verified ceiling, there is no defensible
+  // RPR gap to realize. Report the path honestly unavailable (MODEL RULES
+  // R7) instead of a "calculated" zero that implies headroom was measured.
+  if (highRpr <= baselineRpr) {
+    for (const key of SCENARIO_ORDER) {
+      result[key] = {
+        incrementalUnits: null,
+        rawRevenueLift: null,
+        effectiveRealization: effectiveRealization(key, maturity),
+        realizedRevenueLift: null,
+        basis: 'INSUFFICIENT_DATA',
+      };
+    }
+    return result;
+  }
 
   ledger.push({
     formula: 'Theoretical RPR Gap = Benchmark High RPR − Baseline RPR',
@@ -542,19 +579,46 @@ export function calculateAcrOpportunity(
   const resolved = resolveInputs(research, industry);
 
   // --- Data sufficiency (P4) ---
+  // Status reflects whether the evidence for the specific pathways being
+  // evaluated resolved — not merely that generic anchors exist. When the
+  // collection pathway is inactive (no observed mechanism AND no proposed
+  // solution creating one), its funnel inputs are the expected honest absence
+  // (observed business property), not missing evidence.
+  const collectionInactive =
+    research.hasQuiz !== true && research.solutionActivatesDataCollection !== true;
   if (traffic.basis === 'INSUFFICIENT_DATA') missing.push('monthly traffic');
   if (resolved.aov.basis === 'INSUFFICIENT_DATA') missing.push('AOV (observed or benchmarked)');
   if (resolved.conversionRate.basis === 'INSUFFICIENT_DATA') missing.push('baseline conversion rate');
-  if (resolved.quizParticipation.basis === 'INSUFFICIENT_DATA' && research.hasQuiz !== false) missing.push('data-collection start rate');
-  if (resolved.quizToPurchase.basis === 'INSUFFICIENT_DATA' && research.hasQuiz !== false) missing.push('data-collection purchase rate');
-
-  const status: CalculatedMetrics['sufficiency']['status'] =
-    missing.length === 0 ? 'SUFFICIENT' : missing.length <= 2 ? 'PARTIAL' : 'INSUFFICIENT_DATA';
+  if (
+    resolved.quizParticipation.basis === 'INSUFFICIENT_DATA' &&
+    !collectionInactive
+  ) {
+    missing.push('data-collection start rate');
+  }
+  if (
+    resolved.quizToPurchase.basis === 'INSUFFICIENT_DATA' &&
+    !collectionInactive
+  )
+  {
+    missing.push('data-collection purchase rate');
+  }
 
   // Revenue math requires traffic + AOV (P4). Without them, both paths
   // are INSUFFICIENT_DATA — a realization factor does not make an
   // invalid model valid.
   const revenueViable = traffic.value !== null && resolved.aov.value !== null;
+
+  // When the revenue prerequisites themselves are missing, no pathway can
+  // produce a figure — that is INSUFFICIENT_DATA regardless of how few
+  // items landed in `missing` (pathway-inactive inputs are excluded above
+  // as honest observed absences, not evidence gaps).
+  const status: CalculatedMetrics['sufficiency']['status'] = !revenueViable && missing.length > 0
+    ? 'INSUFFICIENT_DATA'
+    : missing.length === 0
+      ? 'SUFFICIENT'
+      : missing.length <= 2
+        ? 'PARTIAL'
+        : 'INSUFFICIENT_DATA';
 
   const emptyScenario = (): Record<ScenarioKey, PathScenario> => {
     const out = {} as Record<ScenarioKey, PathScenario>;
@@ -679,6 +743,22 @@ export function calculateAcrOpportunity(
   if (maturity === 'basic') {
     limitations.push('Automation maturity defaults to BASIC (×1.00) — specify the existing lifecycle stack for a modifier-adjusted estimate.');
   }
+  if (
+    research.solutionActivatesDataCollection === true &&
+    research.hasQuiz !== true
+  ) {
+    limitations.push(
+      'Potential Revenue Lift is a MODELLED opportunity: the proposed solution would create the on-site data-collection mechanism; funnel rates are documented scenario assumptions applied counterfactually — not observed funnel data.'
+    );
+  }
+
+  // Provenance for how the collection funnel was activated.
+  const collectionActivation: CalculatedMetrics['inputs']['collectionActivation'] =
+    research.hasQuiz === true
+      ? 'observed'
+      : research.solutionActivatesDataCollection === true
+        ? 'counterfactual'
+        : 'none';
 
   return {
     sufficiency: {
@@ -700,6 +780,7 @@ export function calculateAcrOpportunity(
       industry,
       industryBasis: industryInfo.basis,
       replenishmentWindow: resolved.replenishmentWindow,
+      collectionActivation,
     },
     conversion,
     retention,
@@ -714,7 +795,7 @@ export function calculateAcrOpportunity(
     evidenceLedger: ledger,
     formulasApplied: [
       'Glow Curator: Participants = Traffic × Participation; Purchases = Completions × Quiz-to-Purchase; Incremental = MAX(0, Purchases − Participants × Baseline CVR), capped at Participants',
-      'LTV System: Gap = Benchmark High RPR − Baseline RPR; Projected RPR = clamp(Baseline + Gap × Effective Realization, 0, 1); Additional Buyers = Entering × ΔRPR',
+      'LTV System: Gap = Benchmark High RPR − Baseline RPR; Projected RPR = clamp(Baseline + Gap × Effective Realization, 0, 1); Additional Buyers = Entering × ΔRPR (available only when a verified ceiling strictly above the baseline exists)',
       'Combined = (Conversion Lift + Retention Lift) × (1 − Risk Buffer), per scenario',
     ],
     dataLimitations: limitations,

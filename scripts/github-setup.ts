@@ -95,7 +95,7 @@ Full-stack research intelligence platform:
 - Owner and Prospect research modes
 - Server-side premium paywall
 - $1.50 structured export (CSV/JSON)
-- Paystack payment integration
+- Bachs payment integration
 - Webhook signature verification
 - GitHub API integration
 - Editorial teal/ivory design theme`;

@@ -101,6 +101,14 @@ export interface CalculatedMetrics {
     industry: IndustryKey;
     industryBasis: string;
     replenishmentWindow: string;
+    /**
+     * How the data-collection funnel was activated:
+     *   'observed'       — existing on-site mechanism (hasQuiz === true) [OBS]
+     *   'counterfactual' — created by the proposed solution (hasQuiz === false,
+     *                      solutionActivatesDataCollection === true)
+     *   'none'           — no mechanism observed or proposed
+     */
+    collectionActivation: 'observed' | 'counterfactual' | 'none';
   };
 
   conversion: Record<ScenarioKey, PathScenario>;
@@ -135,6 +143,14 @@ export interface CalculatorResearchData {
   displayName: string;
   industrySignals: string[];
   hasQuiz: boolean | null;
+  /**
+   * Deterministic classification of the PROPOSED SOLUTION (prospect mode):
+   * true when the solution explicitly creates an on-site data-collection
+   * mechanism. This is a counterfactual MODEL-ACTIVATION flag — distinct
+   * from `hasQuiz`, which is the OBSERVED current business state.
+   * Absent (undefined) = no proposed solution or no data-collection concept.
+   */
+  solutionActivatesDataCollection?: boolean;
   /** Observed baseline conversion rate (fraction) if ever established. */
   observedConversionRate?: number | null;
   /** Observed repeat purchase rate (fraction) if ever established. */

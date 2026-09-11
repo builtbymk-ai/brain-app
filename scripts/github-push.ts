@@ -34,7 +34,7 @@ Full-stack research intelligence platform:
 - Owner and Prospect research modes
 - Server-side premium paywall (free = 2 rows, paid = all)
 - $1.50 structured export (CSV/JSON)
-- Paystack payment integration with webhook signature verification
+- Bachs payment integration with webhook signature verification
 - GitHub API integration
 - Editorial teal/ivory design theme`;
 execSync(`git commit -m "${commitMsg}"`, { cwd: "/home/daytona/codebase", stdio: "inherit" });

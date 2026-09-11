@@ -170,7 +170,15 @@ export function selectRetentionBenchmark(industry: IndustryKey): BenchmarkRecord
   return getBenchmark('BMK-015') as BenchmarkRecord;
 }
 
-/** The benchmark "high" RPR ceiling used for the theoretical RPR gap. */
+/**
+ * The benchmark "high" RPR ceiling used for the theoretical RPR gap:
+ * the highest VERIFIED retention reference for the industry. A verified
+ * ceiling only constitutes a valid gap when it sits strictly above the
+ * business's resolved baseline RPR — that comparison happens in the
+ * calculator (where the resolved baseline is known), so a baseline equal
+ * to the ceiling can never masquerade as a "29% → 29% improvement"
+ * (forensic-audit fix; unverified BMK-076 can never serve, R6).
+ */
 export function selectBenchmarkHighRpr(industry: IndustryKey): BenchmarkRecord {
   // The consumable RPR (0.29) is the higher verified retention reference.
   return selectRetentionBenchmark(industry);

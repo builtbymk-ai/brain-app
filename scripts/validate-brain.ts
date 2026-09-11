@@ -183,8 +183,8 @@ async function main(): Promise<void> {
   console.log('  - Multiple benchmark sources → applicable source selected (inspect Gemini output)');
   console.log('  - Refresh persists results (needs browser session)');
   console.log('  - Export contains correct results (needs DB + payment)');
-  console.log('  - Paystack failure → export locked (live Paystack)');
-  console.log('  - Paystack success → export unlocked (live Paystack)');
+  console.log('  - Bachs failure → export locked (live Bachs)');
+  console.log('  - Bachs success → export unlocked (live Bachs)');
 
   console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===\n`);
   if (fail > 0) {

@@ -5,8 +5,9 @@ export {};
  * Prints presence only (never values).
  */
 const names = [
-  'PAYSTACK_SECRET_KEY',
-  'NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY',
+  'BACHS_API_KEY',
+  'BACHS_BASE_URL',
+  'BACHS_WEBHOOK_SECRET',
   'NEXT_PUBLIC_EXPORT_CURRENCY',
   'GOOGLE_API_KEY',
   'FIRECRAWL_API_KEY',

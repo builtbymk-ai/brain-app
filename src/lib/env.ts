@@ -23,11 +23,12 @@ export const env = {
   get googleKey() {
     return process.env.GOOGLE_API_KEY;
   },
-  get paystackSecret() {
-    return process.env.PAYSTACK_SECRET_KEY;
+  // Bachs payment provider (checkout sessions + webhooks) — server-side only.
+  get bachsApiKey() {
+    return process.env.BACHS_API_KEY ?? null;
   },
-  get paystackPublicKey() {
-    return process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
+  get bachsBaseUrl() {
+    return process.env.BACHS_BASE_URL ?? 'https://sandbox-api.bachs.io';
   },
   get r2AccountId() {
     return process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -49,8 +50,12 @@ export const env = {
       ''
     );
   },
-  get paystackWebhookSecret() {
-    return process.env.PAYSTACK_WEBHOOK_SECRET ?? null;
+  get bachsWebhookSecret() {
+    return process.env.BACHS_WEBHOOK_SECRET ?? null;
+  },
+  get bachsWebhookTolerance() {
+    const n = Number(process.env.BACHS_WEBHOOK_TOLERANCE);
+    return Number.isFinite(n) && n > 0 ? n : 300;
   },
 
   // OpenRouter secondary AI provider

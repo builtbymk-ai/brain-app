@@ -11,7 +11,7 @@ BRAIN is a full-stack business research and intelligence platform that transform
 1. **Research** — Collects publicly available signals from multiple sources (web presence, products, reviews, social media, search visibility)
 2. **Analyze** — Runs a deterministic ACR (Acquisition–Conversion–Retention) Revenue Opportunity Calculator against collected evidence
 3. **Interpret** — Uses AI (Gemini, OpenRouter) or a deterministic fallback to produce actionable intelligence reports
-4. **Export** — Delivers structured CSV/JSON exports for $1.50 via Paystack
+4. **Export** — Delivers structured CSV/JSON exports for $1.50 via Bachs
 
 ---
 
@@ -50,7 +50,7 @@ For freelancers/agencies evaluating a potential client. Input a proposed solutio
 | Web Scraping | Firecrawl, Apify |
 | Search | SerpAPI |
 | Business Data | Apollo.io |
-| Payments | Paystack (NGN) |
+| Payments | Bachs.io (hosted checkout) |
 | Storage | Cloudflare R2 |
 | Analytics | Google (Custom Search API) |
 
@@ -63,10 +63,10 @@ src/
 ├── app/
 │   ├── api/
 │   │   ├── research/route.ts       # Research pipeline endpoint
-│   │   ├── export/create/route.ts  # Create export (Paystack checkout)
+│   │   ├── export/create/route.ts  # Create export (Bachs checkout session)
 │   │   ├── export/verify/route.ts  # Verify payment & serve export
 │   │   ├── github/route.ts         # GitHub API integration
-│   │   └── paystack/webhook/route.ts
+│   │   └── bachs/webhook/route.ts  # Bachs webhook (source of truth)
 │   ├── research/
 │   │   ├── page.tsx                # Mode chooser
 │   │   ├── owner/page.tsx          # Owner research workspace
@@ -100,7 +100,7 @@ src/
     │   └── types.ts                # Research types
     ├── export/serialize.ts         # CSV/JSON export serializer
     ├── paywall.ts                  # Server-side premium paywall
-    ├── paystack.ts                 # Paystack payment client
+    ├── bachs.ts                     # Bachs payment provider client
     ├── github.ts                   # GitHub API client
     ├── env.ts                      # Environment variable access
     ├── id.ts                       # ID generation
@@ -161,8 +161,8 @@ The paywall is enforced server-side. Premium fields are stripped from API respon
 | Variable | Description |
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` | Paystack public key (client-side checkout) |
-| `PAYSTACK_SECRET_KEY` | Paystack secret key (server-side verification) |
+| `BACHS_API_KEY` | Bachs secret key (server-side checkout + verification) |
+| `BACHS_BASE_URL` | Bachs API base URL (`https://sandbox-api.bachs.io` sandbox, `https://api.bachs.io` production) |
 | `GOOGLE_API_KEY` | Google Custom Search API key |
 | `FIRECRAWL_API_KEY` | Firecrawl API key (web content extraction) |
 | `APIFY_TOKEN` | Apify token (social media scraping) |
@@ -181,7 +181,8 @@ The paywall is enforced server-side. Premium fields are stripped from API respon
 | `OPENROUTER_PRIMARY_MODEL` | OpenRouter primary model ID |
 | `OPENROUTER_FALLBACK_MODEL` | OpenRouter fallback model ID |
 | `GITHUB_TOKEN` | GitHub personal access token (repo integration) |
-| `PAYSTACK_WEBHOOK_SECRET` | Paystack webhook HMAC signature secret |
+| `BACHS_WEBHOOK_SECRET` | Bachs webhook HMAC-SHA256 signature secret |
+| `BACHS_WEBHOOK_TOLERANCE` | Bachs webhook replay tolerance in seconds (default 300) |
 
 ---
 
@@ -231,9 +232,9 @@ npm start
 | Endpoint | Method | Description |
 |---|---|---|
 | `/api/research` | POST | Run research pipeline for one or more businesses |
-| `/api/export/create` | POST | Initialize export + Paystack checkout |
-| `/api/export/verify` | POST | Verify payment and unlock export |
-| `/api/paystack/webhook` | POST | Paystack webhook (signature-verified) |
+| `/api/export/create` | POST | Initialize export + Bachs checkout session |
+| `/api/export/verify` | POST | Verify payment (via Bachs) and unlock export |
+| `/api/bachs/webhook` | POST | Bachs webhook (HMAC-SHA256 signature-verified, source of truth) |
 | `/api/github` | GET | GitHub connection status, repos, branches, commits |
 | `/api/github` | POST | Create GitHub repository |
 
