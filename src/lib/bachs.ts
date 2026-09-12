@@ -142,9 +142,29 @@ export interface VerifyResult {
 }
 
 /**
+ * Normalize a Bachs payment state to BRAIN's three-state model.
+ *
+ * Bachs has used both "succeeded" (older charges/events) and "paid" (current
+ * checkout sessions — observed live: `payment_status: "paid"` with
+ * `status: "completed"`) for a collected one-time payment, so both map to
+ * `paid`. A session `status` of `completed` with no payment_status field also
+ * means collected. Anything unrecognized stays `pending` (never guessed).
+ */
+export function mapPaymentStatus(
+  paymentStatus?: string | null,
+  sessionStatus?: string | null
+): VerifyResult['status'] {
+  const p = (paymentStatus ?? '').toLowerCase();
+  if (p === 'succeeded' || p === 'paid' || p === 'completed') return 'paid';
+  if (p === 'failed' || p === 'canceled' || p === 'cancelled' || p === 'expired') return 'failed';
+  if (!p && (sessionStatus ?? '').toLowerCase() === 'completed') return 'paid';
+  return 'pending';
+}
+
+/**
  * Server-side payment state from Bachs: GET /v1/checkout-sessions/{id}.
  * The `charge` field populates once the customer submits a payment;
- * `payment_status === 'succeeded'` is the authoritative paid state.
+ * `payment_status === 'succeeded' | 'paid'` is the authoritative paid state.
  */
 export async function verifyCheckoutSession(checkoutId: string): Promise<VerifyResult | null> {
   let apiKey: string;
@@ -172,9 +192,7 @@ export async function verifyCheckoutSession(checkoutId: string): Promise<VerifyR
       checkout_id?: string;
     };
 
-    // Map Bachs payment_status to BRAIN's normalized states.
-    const status: VerifyResult['status'] =
-      d?.payment_status === 'succeeded' ? 'paid' : d?.payment_status === 'failed' || d?.payment_status === 'canceled' ? 'failed' : 'pending';
+    const status = mapPaymentStatus(d?.payment_status, d?.status);
 
     return {
       status,
@@ -250,13 +268,131 @@ export interface BachsEvent {
   id: string;
   type: BachsEventType;
   createdAt?: string;
+  /**
+   * Event payload. In the real Bachs delivery everything lives here —
+   * payment_status, reference, metadata and the charge are all nested under
+   * `data` (observed live on checkout.completed).
+   */
   data?: {
     charge_id?: string;
     checkout_id?: string;
     status?: string;
     amount?: string;
     currency?: string;
+    payment_status?: string | null;
+    /** Our own order id, echoed back on the checkout object. */
+    reference?: string;
+    /** Checkout/session metadata — copied from the create request. */
+    metadata?: Record<string, unknown>;
+    /** Populated once the customer submits a payment. */
+    charge?: {
+      id?: string;
+      status?: string;
+      amount?: string;
+      currency?: string;
+      settlement_amount?: string;
+      settlement_currency?: string;
+      metadata?: Record<string, unknown>;
+    } | null;
   };
+  /** Legacy/alternate location — tolerated but never relied upon. */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Resolve the BRAIN transaction reference from a verified Bachs event.
+ *
+ * Precedence: checkout metadata.brain_reference (written by /api/export/create),
+ * charge metadata fallback, the checkout's own `reference` field, then the
+ * top-level legacy metadata location. Session-id values are normalized into
+ * `brain_` references (the create route's `brain_<sessionId>` fallback shape).
+ */
+export function extractBrainReference(event: BachsEvent): string | null {
+  const dataMeta = event.data?.metadata ?? {};
+  const chargeMeta = event.data?.charge?.metadata ?? {};
+  const legacyMeta = event.metadata ?? {};
+
+  const candidates: Array<[unknown, boolean]> = [
+    [dataMeta.brain_reference, true],
+    [dataMeta.session_id, false],
+    [chargeMeta.brain_reference, true],
+    [chargeMeta.session_id, false],
+    [event.data?.reference, true],
+    [legacyMeta.brain_reference, true],
+    [legacyMeta.session_id, false],
+  ];
+
+  for (const [value, isRef] of candidates) {
+    if (typeof value === 'string' && value) {
+      return isRef ? value : `brain_${value}`;
+    }
+  }
+  return null;
+}
+
+/**
+ * Resolve the Bachs checkout id from a verified event.
+ * The live payload carries it on `data.checkout_id` (and mirrors it inside the
+ * charge); both are checked.
+ */
+export function extractBachsCheckoutId(event: BachsEvent): string | null {
+  const candidates = [event.data?.checkout_id, event.data?.charge?.id];
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.startsWith('chk_')) return c;
+  }
+  // charge.id is a charge id (ch_…), not a checkout id — only accept chk_ values.
+  if (typeof event.data?.checkout_id === 'string' && event.data.checkout_id) {
+    return event.data.checkout_id;
+  }
+  return null;
+}
+
+/**
+ * Extract the checkout id from a Bachs success redirect URL.
+ *
+ * Per the docs, Bachs appends `?checkout_id=` to the configured success_url
+ * after payment. This is the ONLY sanctioned way to recover the id from a URL —
+ * the hosted checkout_url's final path segment is a page token, NOT the id,
+ * and must never be used as one.
+ */
+export function extractCheckoutIdFromSuccessUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const value = new URL(url).searchParams.get('checkout_id');
+    return value && value.startsWith('chk_') ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Decide whether the amount reported by Bachs may be compared against the
+ * authorized price.
+ *
+ * Bachs prices the checkout in the pricing currency (e.g. USD 1.50) and may
+ * bill the customer in their local currency (e.g. NGN 2,217.34), settling at
+ * USD 1.50. The session object's `amount`/`currency` are the PRICED values;
+ * only a same-currency amount can be compared to the authorization. An
+ * unknown amount (webhook-only confirmation, billing-currency representation)
+ * must not fail the check.
+ */
+export function resolveVerifyAmount(
+  sessionAmount: string | null | undefined,
+  sessionCurrency: string | null | undefined,
+  expectedCents: number,
+  expectedCurrency: string | null | undefined
+): { check: boolean; matches: boolean | null; reason: 'ok' | 'unknown-amount' | 'billed-currency' } {
+  const cents = Math.round(Number(sessionAmount) * 100);
+  const known = Number.isFinite(cents) && cents > 0;
+  if (!known) return { check: false, matches: null, reason: 'unknown-amount' };
+
+  const cur = (sessionCurrency ?? '').toUpperCase();
+  const expected = (expectedCurrency ?? '').toUpperCase();
+  if (cur && expected && cur !== expected) {
+    return { check: false, matches: null, reason: 'billed-currency' };
+  }
+
+  return { check: true, matches: cents === expectedCents, reason: 'ok' };
 }
 
 /** Map a Bachs webhook event to BRAIN's normalized payment state, or null to ignore. */

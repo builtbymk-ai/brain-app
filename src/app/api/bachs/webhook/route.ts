@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { db, schema } from '@/db/client';
-import { eq, like } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { env } from '@/lib/env';
-import { verifyBachsWebhookSignature, mapBachsEventStatus, type BachsEvent } from '@/lib/bachs';
+import {
+  verifyBachsWebhookSignature,
+  mapBachsEventStatus,
+  extractBrainReference,
+  extractBachsCheckoutId,
+  type BachsEvent,
+} from '@/lib/bachs';
 
 export const runtime = 'nodejs';
 
@@ -62,13 +68,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true });
   }
 
-  // Locate the BRAIN transaction: prefer metadata.brain_reference, then
-  // metadata.session_id, then the checkout_id stored on the record.
-  const metadata = (event as { metadata?: Record<string, unknown> }).metadata;
-  const brainReference =
-    (typeof metadata?.brain_reference === 'string' && metadata.brain_reference) ||
-    (typeof metadata?.session_id === 'string' && `brain_${metadata.session_id}`) ||
-    null;
+  // Locate the BRAIN transaction. The real Bachs payload nests reference and
+  // metadata under `data` (observed live on checkout.completed):
+  //   data.metadata.brain_reference → data.reference → data.charge.metadata
+  // If the reference still cannot be resolved, fall back to matching the
+  // Bachs checkout id stored on the transaction record at create time.
+  const brainReference = extractBrainReference(event);
 
   let transaction = brainReference
     ? await db.query.exportTransactions.findFirst({
@@ -76,12 +81,13 @@ export async function POST(request: Request) {
       })
     : null;
 
-  if (!transaction && event.data?.checkout_id) {
-    // Match on the checkout token suffix rather than the exact URL: sandbox and
-    // production use different checkout origins, so origin equality is fragile.
-    transaction = await db.query.exportTransactions.findFirst({
-      where: like(schema.exportTransactions.authorizationUrl, `%${event.data.checkout_id}`),
-    });
+  if (!transaction) {
+    const checkoutId = extractBachsCheckoutId(event);
+    if (checkoutId) {
+      transaction = await db.query.exportTransactions.findFirst({
+        where: eq(schema.exportTransactions.checkoutId, checkoutId),
+      });
+    }
   }
 
   if (!transaction) {

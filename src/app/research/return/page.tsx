@@ -17,12 +17,17 @@ function ReturnContent() {
   const params = useSearchParams();
   const reference = params.get('ref');
   const statusParam = params.get('status');
+  // Bachs appends ?checkout_id= to the success_url on redirect — relay it so
+  // the server can query the exact checkout session even before any join data
+  // is needed.
+  const checkoutId = params.get('checkout_id');
 
   const [state, setState] = useState<'checking' | 'paid' | 'unconfirmed' | 'error'>(
     statusParam === 'cancelled' ? 'unconfirmed' : 'checking'
   );
   const [message, setMessage] = useState('');
   const started = useRef(false);
+  const retried = useRef(false);
 
   useEffect(() => {
     if (statusParam === 'cancelled') return;
@@ -34,7 +39,10 @@ function ReturnContent() {
         const res = await fetch('/api/export/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(reference ? { reference } : {}),
+          body: JSON.stringify({
+            ...(reference ? { reference } : {}),
+            ...(checkoutId ? { checkoutId } : {}),
+          }),
         });
         const data = await res.json().catch(() => ({}));
 
@@ -57,6 +65,12 @@ function ReturnContent() {
             data.error ||
               'Payment has not been confirmed yet. If you completed the payment, the confirmation may still be processing — refresh this page in a moment.'
           );
+          // The webhook may still be in flight — recheck once automatically
+          // so the customer is not left stuck on a stale pending screen.
+          if (!retried.current) {
+            retried.current = true;
+            setTimeout(() => window.location.reload(), 6000);
+          }
         } else {
           setState('error');
           setMessage(data.error || 'We could not verify your payment status. Please try again.');
@@ -66,7 +80,7 @@ function ReturnContent() {
         setMessage('Network error while verifying your payment. Please refresh to try again.');
       }
     })();
-  }, [reference, statusParam]);
+  }, [reference, checkoutId, statusParam]);
 
   if (statusParam === 'cancelled') {
     return (

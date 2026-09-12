@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "db:push": "drizzle-kit push",
     "db:migrate": "bun scripts/migrate-add-inputs.ts",
+    "db:migrate-checkout-id": "bun scripts/migrate-add-checkout-id.ts",
     "benchmarks:build": "bun scripts/build-benchmarks.ts",
     "validate": "bun scripts/validate-brain.ts",
     "test:payments": "bun scripts/test-bachs.ts"

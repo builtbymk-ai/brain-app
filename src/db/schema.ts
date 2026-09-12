@@ -61,6 +61,8 @@ export const exportTransactions = pgTable('export_transactions', {
   transactionRef: text('transaction_ref'),
   /** hosted checkout URL (Bachs checkout_url) for the payment */
   authorizationUrl: text('authorization_url'),
+  /** Bachs checkout id (chk_…) — authoritative join key for webhook + verification */
+  checkoutId: text('checkout_id'),
   amount: integer('amount').notNull(),
   currency: text('currency').notNull(),
   /** unpaid | pending | paid | failed | refunded */

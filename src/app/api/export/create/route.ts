@@ -67,12 +67,15 @@ export async function POST(request: Request) {
   }
 
   // Persist a transaction record so the webhook/verification can find it.
-  // authorizationUrl stores the Bachs hosted checkout URL.
+  // authorizationUrl stores the Bachs hosted checkout URL; checkoutId stores
+  // the authoritative chk_… id used for webhook matching and server-side
+  // verification (the URL itself ends in a page token, not the id).
   await db.insert(schema.exportTransactions).values({
     id: transactionId,
     sessionId: resolvedSession.id,
     transactionRef: reference,
     authorizationUrl: checkout.checkoutUrl,
+    checkoutId: checkout.checkoutId,
     amount: 150,
     currency: 'USD',
     paymentStatus: 'pending',

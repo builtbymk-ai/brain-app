@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db, schema } from '@/db/client';
-import { verifyCheckoutSession } from '@/lib/bachs';
+import { verifyCheckoutSession, resolveVerifyAmount } from '@/lib/bachs';
 import { toCsv, toJson, ExportRowPayload } from '@/lib/export/serialize';
 import { uploadFile, createDownloadUrl, isR2Configured } from '@/lib/r2';
 import { generateId } from '@/lib/id';
@@ -40,7 +40,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
   }
 
-  const sessionIdForBachs = checkoutId ?? extractCheckoutId(transaction.authorizationUrl);
+  // Resolve the Bachs checkout id. Precedence: the browser-relayed
+  // ?checkout_id= appended by Bachs to the success_url, then the id stored on
+  // the transaction record at create time. The hosted checkout URL itself is
+  // NOT a source for the id — it ends in a page token, not the chk_… id.
+  const sessionIdForBachs = checkoutId ?? transaction.checkoutId;
   if (!sessionIdForBachs) {
     return NextResponse.json(
       { error: 'Payment could not be verified. Try again or contact support.' },
@@ -57,16 +61,30 @@ export async function POST(request: Request) {
   }
 
   if (verification.status !== 'paid') {
-    return NextResponse.json(
-      { status: verification.status, error: 'Payment not confirmed. Export is still locked.' },
-      { status: 402 }
-    );
+    // The verified webhook may have marked the transaction paid even while a
+    // transient Bachs retrieval hiccup reports pending — trust the recorded
+    // webhook-confirmed state in that case (never the other way around).
+    if (!(transaction.paymentStatus === 'paid' && verification.status === 'pending')) {
+      return NextResponse.json(
+        { status: verification.status, error: 'Payment not confirmed. Export is still locked.' },
+        { status: 402 }
+      );
+    }
   }
 
-  // Server-side amount check: what Bachs actually collected must match
-  // the authorized export price (150 cents = $1.50).
-  const collected = Math.round(Number(verification.amount) * 100);
-  if (Number.isFinite(collected) && collected > 0 && collected !== transaction.amount) {
+  // Server-side amount check: what Bachs reports must match the authorized
+  // export price (150 cents = $1.50) in the PRICED currency. Bachs may bill
+  // the customer in a local currency (e.g. NGN) while settling USD 1.50 — the
+  // session object's amount/currency are the priced values, so a different
+  // reported currency is a billed-currency conversion, not a mismatch. Unknown
+  // amounts never fail the check.
+  const amountCheck = resolveVerifyAmount(
+    verification.amount,
+    verification.currency,
+    transaction.amount,
+    transaction.currency
+  );
+  if (amountCheck.check && amountCheck.matches === false) {
     await db
       .update(schema.exportTransactions)
       .set({ paymentStatus: 'failed', updatedAt: new Date() })
@@ -145,17 +163,3 @@ export async function POST(request: Request) {
   }
 }
 
-/**
- * Recover the Bachs checkout id from the stored checkout URL when the client
- * only knows the BRAIN reference. Bachs hosted URLs end in the checkout token.
- */
-function extractCheckoutId(url: string | null): string | null {
-  if (!url) return null;
-  try {
-    const parsed = new URL(url);
-    const segments = parsed.pathname.split('/').filter(Boolean);
-    return segments.length ? segments[segments.length - 1] : null;
-  } catch {
-    return null;
-  }
-}
