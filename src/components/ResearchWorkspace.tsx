@@ -3,6 +3,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { getModeDefinition, UserType } from '@/lib/analysis/modes';
+import {
+  resolveCheckoutOpenAction,
+  navigateToCheckout,
+  CHECKOUT_UNAVAILABLE_MESSAGE,
+} from '@/lib/checkout-redirect';
 
 interface ResearchResult {
   domain: string;
@@ -167,75 +172,22 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
         return;
       }
 
-      // Step 2: Open the Bachs overlay checkout (hosted page in a modal).
-      // The browser event only drives UI — the server-side webhook/verification
-      // is the source of truth that actually unlocks the export.
-      if (typeof window !== 'undefined' && createData.checkoutUrl) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const Bachs = (window as any).Bachs;
+      // Step 2: Send the customer to the Bachs hosted checkout — the documented
+      // hosted-page integration ("a plain redirect to checkout_url"). The
+      // redirect itself never grants entitlement: Bachs returns the customer to
+      // /research/return, where the server verifies the payment against Bachs
+      // and the webhook remains the fulfilment source of truth.
+      const action = resolveCheckoutOpenAction(createData);
 
-        if (Bachs?.Checkout?.open) {
-          // One-time SDK initialization (required before open()).
-          if (!Bachs.__brainInitialized) {
-            Bachs.Initialize({ onEvent: () => {} });
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (Bachs as any).__brainInitialized = true;
-          }
-          Bachs.Checkout.open({
-            checkoutUrl: createData.checkoutUrl,
-            onEvent: (event: { type: string }) => {
-              if (event.type === 'checkout.completed') {
-                verifyPayment(createData.reference);
-              }
-              if (event.type === 'checkout.closed' || event.type === 'checkout.expired') {
-                setExportState('idle');
-              }
-            },
-          });
-        } else {
-          // Fallback: full-page redirect to the hosted checkout
-          window.location.href = createData.checkoutUrl;
-        }
-      } else {
-        setError('Bachs checkout is not available. Please try again later.');
-        setExportState('error');
-      }
-    } catch {
-      setError('Export initialization failed. Please try again.');
-      setExportState('error');
-    }
-  };
-
-  const verifyPayment = async (reference: string) => {
-    try {
-      const res = await fetch('/api/export/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reference }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'Payment verification failed.');
+      if (action.type === 'error') {
+        setError(action.message);
         setExportState('error');
         return;
       }
 
-      if (data.status === 'paid') {
-        if (data.downloadUrl) {
-          setDownloadUrl(data.downloadUrl);
-        }
-        if (data.inline && data.data) {
-          setExportData(data.data);
-        }
-        setExportState('done');
-      } else {
-        setError('Payment not confirmed. Export is still locked.');
-        setExportState('error');
-      }
+      navigateToCheckout(action.url);
     } catch {
-      setError('Verification failed. Please contact support.');
+      setError('Export initialization failed. Please try again.');
       setExportState('error');
     }
   };
@@ -571,20 +523,20 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
                         className="rw-btn-primary"
                         onClick={handleExport}
                         disabled={exportState === 'paying'}
-                      >
-                        {exportState === 'paying' ? (
-                          <span className="rw-loading">
-                            <span className="rw-spinner" aria-hidden="true"></span>
-                            Processing…
-                          </span>
-                        ) : (
-                          'Pay & Export — $1.50'
-                        )}
+                      >        {exportState === 'paying' ? (
+          <span className="rw-loading">
+            <span className="rw-spinner" aria-hidden="true"></span>
+            Redirecting to secure checkout…
+          </span>
+        ) : (
+          'Pay & Export — $1.50'
+        )}
                       </button>
                     </div>
                     <p className="rw-export-note">
-                      Payment is processed securely via Bachs. Your export will be
-                      available for download immediately after payment.
+                      Payment is processed securely via Bachs. You will be redirected
+                      to the secure checkout page and returned here once your export
+                      is available for download.
                     </p>
                   </div>
                 </div>
@@ -617,8 +569,6 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
         </div>
       </main>
 
-      {/* Bachs overlay checkout SDK */}
-      <script src="https://checkout.bachs.io/bachs.js" async />
     </div>
   );
 }
