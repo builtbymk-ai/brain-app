@@ -527,7 +527,7 @@ Potential Lift = $3,180/mo`}
                 </p>
               </article>
               <article className="roadmap-card">
-                <span className="roadmap-card-status planned">Planned</span>
+                <span className="roadmap-card-status completed">Completed</span>
                 <div className="roadmap-card-num">02</div>
                 <h3 className="roadmap-card-title">Automated Intelligence</h3>
                 <p className="roadmap-card-desc">
@@ -536,7 +536,7 @@ Potential Lift = $3,180/mo`}
                 </p>
               </article>
               <article className="roadmap-card">
-                <span className="roadmap-card-status planned">Planned</span>
+                <span className="roadmap-card-status completed">Completed</span>
                 <div className="roadmap-card-num">03</div>
                 <h3 className="roadmap-card-title">Opportunity Analysis</h3>
                 <p className="roadmap-card-desc">
