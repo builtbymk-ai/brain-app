@@ -45,9 +45,6 @@ drizzle/meta/
 # Convex (if used)
 convex/_generated/
 
-# Scripts (test/qa - not part of production)
-scripts/
-
 # Freebuff internals
 .freebuff/
 freebuff-*
