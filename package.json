@@ -12,6 +12,7 @@
     "db:migrate:v2b3": "bun scripts/migrate-add-revenue-state.ts",
     "test:revenue-state": "bun scripts/test-revenue-state.ts",
     "test:classifier": "bun scripts/test-classifier.ts",
+    "test:recovery": "bun scripts/test-recovery.ts",
     "db:migrate-checkout-id": "bun scripts/migrate-add-checkout-id.ts",
     "benchmarks:build": "bun scripts/build-benchmarks.ts",
     "validate": "bun scripts/validate-brain.ts",

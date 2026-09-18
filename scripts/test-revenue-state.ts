@@ -7,7 +7,10 @@
  *            observed RPR → benchmark-only degenerate gap (evidence wording)
  *   Case B2 — INSUFFICIENT_DATA: observed RPR at the ceiling → degenerate-gap
  *            guard holds, wording reflects that RPR WAS provided
- *   Case C — NOT_SUPPORTED: no validated pathway (abandoned checkout recovery)
+ *   Case C — NOT_SUPPORTED: no validated pathway (upsells). Note: since V2D.3,
+ *            abandoned-checkout recovery HAS a validated pathway (first-party
+ *            L3 experiment) and without evidence lands in INSUFFICIENT_DATA —
+ *            covered by scripts/test-recovery.ts.
  *   Case D — TRUE ZERO: a genuine calculated $0/mo stays CALCULATED
  *   Plus: state derivation units + export survival (CSV + JSON) for all four.
  *
@@ -131,11 +134,13 @@ function caseB2() {
 }
 
 // ---------------------------------------------------------------------------
-// Case C — NOT_SUPPORTED: abandoned checkout recovery has no validated
-// revenue calculation pathway.
+// Case C — NOT_SUPPORTED: an intervention with no validated revenue pathway.
+// (Abandoned-checkout recovery moved to INSUFFICIENT_DATA in V2D.3 — the
+// pathway now exists but requires documented experiment evidence; that state
+// is covered by scripts/test-recovery.ts.)
 // ---------------------------------------------------------------------------
 function caseC() {
-  console.log('\n[Case C] Not supported — abandoned checkout recovery');
+  console.log('\n[Case C] Not supported — upsells (no validated pathway)');
   const m = calculateAcrOpportunity(
     {
       domain: 'v2b3-c.example.com',
@@ -147,7 +152,7 @@ function caseC() {
     { userType: 'prospect' }
   );
 
-  const state = deriveRevenueState(m, classifyProposedSolution('abandoned checkout recovery').dimension);
+  const state = deriveRevenueState(m, classifyProposedSolution('post-purchase upsells').dimension);
   const explanation = buildRevenueExplanation(state, m);
 
   check('C: state = NOT_SUPPORTED', state === 'NOT_SUPPORTED', `got ${state}`);
@@ -156,6 +161,14 @@ function caseC() {
   check('C: reason = pathway wording', explanation.reason === 'BRAIN does not currently have a validated revenue calculation pathway for this intervention.');
   check('C: no evidence ask (pathway gap, not evidence gap)',
     explanation.additionalEvidence === null && explanation.why === null);
+
+  // V2D.3 cross-check: the SAME no-evidence calculator output routes to
+  // INSUFFICIENT_DATA (not NOT_SUPPORTED) when the proposal is explicitly an
+  // abandoned-checkout recovery intervention — the recovery pathway exists.
+  const recoveryCls = classifyProposedSolution('abandoned checkout recovery');
+  const recoveryState = deriveRevenueState(m, recoveryCls.dimension, recoveryCls.activatesRecoveryPathway);
+  check('C: recovery proposal on identical output → INSUFFICIENT_DATA (V2D.3 pathway exists)',
+    recoveryState === 'INSUFFICIENT_DATA', `got ${recoveryState}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -241,8 +254,6 @@ function units() {
     deriveRevenueState(fake({ inputs: inputsNone }), dim('generic branding and content strategy')) === 'NOT_SUPPORTED');
   check('U: no pathway + upsell (CONVERSION) → NOT_SUPPORTED',
     deriveRevenueState(fake({ inputs: inputsNone }), dim('post-purchase upsells')) === 'NOT_SUPPORTED');
-  check('U: no pathway + abandoned checkout (CONVERSION) → NOT_SUPPORTED',
-    deriveRevenueState(fake({ inputs: inputsNone }), dim('abandoned checkout recovery')) === 'NOT_SUPPORTED');
   check('U: no pathway + retention solution → INSUFFICIENT_DATA',
     deriveRevenueState(fake({ inputs: inputsNone }), dim('win-back email automation')) === 'INSUFFICIENT_DATA');
   check('U: no pathway + loyalty program → INSUFFICIENT_DATA',
@@ -272,14 +283,26 @@ function units() {
   check('U: all V2B retention interventions #12–18 map to INSUFFICIENT_DATA (no owner data)',
     audit12to18.every((s) => deriveRevenueState(fake({ inputs: inputsNone }), dim(s)) === 'INSUFFICIENT_DATA'));
 
-  // V2B-unsupported set stays NOT_SUPPORTED.
+  // V2B-unsupported set stays NOT_SUPPORTED. (V2D.3: abandoned-checkout
+  // recovery is no longer in this set — its pathway exists, so without
+  // experiment evidence it is INSUFFICIENT_DATA, exercised via the
+  // activatesRecoveryPathway flag above.)
   const unsupported = [
-    'upsells', 'cross-sells', 'product bundles', 'abandoned checkout recovery',
+    'upsells', 'cross-sells', 'product bundles',
     'generic CRO / checkout optimization', 'reviews and social proof optimization',
     'SEO', 'paid acquisition', 'referral acquisition',
   ];
   check('U: V2B-unsupported interventions remain NOT_SUPPORTED',
     unsupported.every((s) => deriveRevenueState(fake({ inputs: inputsNone }), dim(s)) === 'NOT_SUPPORTED'));
+
+  // V2D.3: recovery-classified solutions never fall to NOT_SUPPORTED —
+  // the single-source classifier flag routes them to INSUFFICIENT_DATA.
+  check('U: recovery-classified solution + no calculator output → INSUFFICIENT_DATA (V2D.3)',
+    deriveRevenueState(
+      fake({ inputs: inputsNone }),
+      dim('abandoned checkout recovery'),
+      true
+    ) === 'INSUFFICIENT_DATA');
 }
 
 // ---------------------------------------------------------------------------

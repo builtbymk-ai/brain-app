@@ -18,6 +18,7 @@ import {
 } from './revenue-state';
 import { ValidatedFirstPartyInput } from './first-party';
 import { compact, toNumber } from './signals';
+import type { RecoveryExperimentEvidence } from '../analysis/types';
 
 /**
  * Run the full research pipeline for a single business.
@@ -42,6 +43,15 @@ export interface ResearchInput {
    * benchmarks. Absent fields fall through to the benchmark fallback chain.
    */
   firstPartyEconomics?: ValidatedFirstPartyInput;
+  /**
+   * V2D.3 — documented controlled recovery experiment (L3 evidence), already
+   * validated by the API layer via validateRecoveryEvidence(). Passes through
+   * untouched to the ACR calculator, which is the sole authority for all
+   * recovery arithmetic. Absent = no experiment: the recovery pathway is
+   * evidentially unavailable (L0–L2 → INSUFFICIENT_DATA, never attributed
+   * recovery → lift).
+   */
+  recoveryExperiment?: RecoveryExperimentEvidence | null;
 }
 
 export async function researchBusiness(
@@ -124,6 +134,10 @@ export async function researchBusiness(
       // calculator's existing OBS-precedence resolution chains. Nothing is
       // derived, scaled or defaulted here (V2B.1 §7).
       ...input.firstPartyEconomics,
+      // V2D.3: the documented L3 recovery experiment is owner-supplied first-
+      // party evidence — it reaches the calculator only through the validated
+      // intake (validateRecoveryEvidence), never raw or prospect-supplied.
+      recoveryExperiment: input.recoveryExperiment ?? null,
     },
     aggregate.traffic,
     { userType, trafficSource }
@@ -139,11 +153,16 @@ export async function researchBusiness(
   const revenueState: RevenueState = deriveRevenueState(
     calculated,
     solutionClassification.dimension,
+    solutionClassification.activatesRecoveryPathway,
   );
   const revenueExplanation: RevenueExplanation | null =
     revenueState === 'CALCULATED'
       ? null
-      : buildRevenueExplanation(revenueState, calculated);
+      : buildRevenueExplanation(
+          revenueState,
+          calculated,
+          solutionClassification.activatesRecoveryPathway,
+        );
 
   // A source is only "complete" if we actually retrieved core signals.
   const hasAnyRealSignal =
@@ -233,6 +252,17 @@ function buildRevenueCalculationTrail(calculated: CalculatedMetrics): string {
   }
   lines.push(`RPR = ${fmtRate(i.repeatPurchaseRate.value ?? 0)} [${i.repeatPurchaseRate.basis}]`);
 
+  // V2D.3 — recovery-path resolved inputs, only when the documented L3
+  // experiment was supplied (owner mode). Attributed recovery is never
+  // displayed here: only the experiment's own resolved economics.
+  if (i.recoveryActivation === 'experiment') {
+    lines.push(`Monthly Abandoned Checkouts = observed [OBS]`);
+    if (i.recoveryAov.value !== null) {
+      lines.push(`Recovery AOV = ${fmtMoney(i.recoveryAov.value)} [${i.recoveryAov.basis}]`);
+    }
+    lines.push(`Experiment Window = ${i.recoveryWindowDays.value ?? '—'} days [${i.recoveryWindowDays.basis}]`);
+  }
+
   // Model shape — both paths, when they produced numbers.
   const conv = calculated.conversion.base;
   const ret = calculated.retention.base;
@@ -246,6 +276,11 @@ function buildRevenueCalculationTrail(calculated: CalculatedMetrics): string {
     lines.push('Projected RPR = Baseline + ΔRPR × Realization');
     lines.push('Additional Buyers = Entering × ΔRPR');
     lines.push('LTV Lift = Additional Buyers × AOV');
+  }
+  const rec = calculated.recovery.base;
+  if (rec.incrementalUnits !== null) {
+    lines.push('Incremental Recovery Rate = Treatment Rate − Control Rate');
+    lines.push('Recovery Lift = Monthly Eligible × Δ Rate × Recovery AOV');
   }
 
   // Unavailable: no pathway produced a calculable figure (combined is the
@@ -264,7 +299,10 @@ function buildRevenueCalculationTrail(calculated: CalculatedMetrics): string {
   // Risk adjustment and result. Per MODEL RULES P2 the buffer is ONE
   // composite haircut for model error — never presented as three separate
   // technical/market/infrastructure deductions (V1 audit finding).
-  const grossBase = (conv.realizedRevenueLift ?? 0) + (ret.realizedRevenueLift ?? 0);
+  const grossBase =
+    (conv.realizedRevenueLift ?? 0) +
+    (ret.realizedRevenueLift ?? 0) +
+    (rec.realizedRevenueLift ?? 0);
   const potential = combinedBase.low;
   lines.push(`Gross Lift = $${grossBase.toLocaleString('en-US')}/mo`);
   lines.push(`Risk Adjustment = −$${(grossBase - potential).toLocaleString('en-US')}`);

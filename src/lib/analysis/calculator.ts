@@ -20,6 +20,9 @@
  */
 
 import {
+  RecoveryExperimentEvidence,
+} from './types';
+import {
   AppliedAssumption,
   AppliedBenchmark,
   AutomationMaturity,
@@ -456,6 +459,120 @@ function calculateConversionPath(
  * clamped to [0, 1]. Additional repeat buyers = customers entering ×
  * (projected − baseline), floored at zero.
  */
+/**
+ * V2D.3 — First-party abandoned-checkout recovery path (L3 experiment).
+ *
+ * Eligible ONLY with documented controlled-comparison evidence (V2D.2 §5):
+ * treatment/control arms over the same abandoned-checkout population and
+ * window. Attributed recovery, pre/post comparisons, and population counts
+ * never reach this function — the intake layer simply has no representation
+ * for them.
+ *
+ * Arithmetic (deterministic, this calculator only):
+ *   treatmentRate = treatmentRecovered / treatmentEligible
+ *   controlRate   = controlRecovered  / controlEligible
+ *   deltaRate     = max(0, treatmentRate − controlRate)   [true zero preserved]
+ *   monthlyEligible = recoveryExperiment.monthlyAbandonedCheckouts [OBS]
+ *   incrementalOrders = monthlyEligible × deltaRate       (floored at 0)
+ *   gross = incrementalOrders × recoveryAov
+ *   lift  = riskAdjusted(gross, scenario)                [existing buffer]
+ *
+ * The experiment's own arm outcomes are attributable observations; the LIFT
+ * comes only from the between-arm difference (baseline recovery is never
+ * counted as new revenue — V2D.3 §11).
+ */
+function calculateRecoveryPath(
+  experiment: RecoveryExperimentEvidence | null | undefined,
+  recoveryAov: number | null,
+  maturity: AutomationMaturity,
+  ledger: FormulaStep[],
+  limitations: string[]
+): Record<ScenarioKey, PathScenario> {
+  const result = {} as Record<ScenarioKey, PathScenario>;
+
+  const unresolved =
+    !experiment ||
+    recoveryAov === null ||
+    recoveryAov === undefined ||
+    recoveryAov <= 0 ||
+    experiment.treatmentEligible <= 0 ||
+    experiment.controlEligible <= 0;
+
+  if (unresolved) {
+    for (const key of SCENARIO_ORDER) {
+      result[key] = {
+        incrementalUnits: null,
+        rawRevenueLift: null,
+        effectiveRealization: effectiveRealization(key, maturity),
+        realizedRevenueLift: null,
+        basis: 'INSUFFICIENT_DATA',
+      };
+    }
+    return result;
+  }
+
+  const treatmentRate = experiment.treatmentRecovered / experiment.treatmentEligible;
+  const controlRate = experiment.controlRecovered / experiment.controlEligible;
+
+  ledger.push({
+    formula: 'Treatment Recovery Rate = Treatment Recovered ÷ Treatment Eligible; Control Recovery Rate = Control Recovered ÷ Control Eligible',
+    inputs: {
+      treatmentRecovered: experiment.treatmentRecovered,
+      treatmentEligible: experiment.treatmentEligible,
+      controlRecovered: experiment.controlRecovered,
+      controlEligible: experiment.controlEligible,
+    },
+    output: round2(treatmentRate),
+    evidence: `[OBS] Documented first-party recovery experiment — arms over the same abandoned-checkout population and window (${experiment.windowDays} days). Intervention difference: ${experiment.interventionDifference}`,
+  });
+
+  // Incremental effect: the between-arm difference ONLY. A treatment rate at
+  // or below control produces a TRUE ZERO (§13) — never negative, never null.
+  const deltaRate = Math.max(0, treatmentRate - controlRate);
+  ledger.push({
+    formula: 'Incremental Recovery Rate = max(0, Treatment Rate − Control Rate)',
+    inputs: { treatmentRate: round2(treatmentRate), controlRate: round2(controlRate) },
+    output: round2(deltaRate),
+    evidence: '[DRV] Between-arm difference — control-arm recovery is baseline and is never counted as lift',
+  });
+
+  // Population × Δ rate, rounded to a whole order (consistent with the
+  // conversion/retention paths) and floored at zero by the guard.
+  const incrementalOrders = guardAdditionalRepeatBuyers(
+    Math.round(experiment.monthlyAbandonedCheckouts * deltaRate)
+  );
+
+  for (const key of SCENARIO_ORDER) {
+    const eff = effectiveRealization(key, maturity);
+    const raw = incrementalOrders * (recoveryAov as number);
+    result[key] = {
+      incrementalUnits: Math.round(incrementalOrders),
+      rawRevenueLift: Math.round(raw),
+      effectiveRealization: eff,
+      realizedRevenueLift: Math.round(raw * eff),
+      basis: deltaRate === 0 ? 'DRV' : 'OBS',
+    };
+  }
+
+  ledger.push({
+    formula: 'Incremental Recovered Orders = Monthly Eligible × Incremental Recovery Rate; Recovery Lift = Orders × Recovery AOV',
+    inputs: { monthlyEligible: experiment.monthlyAbandonedCheckouts, recoveryAov },
+    output: Math.round(incrementalOrders),
+    evidence: `[OBS] Monthly abandoned checkouts [${recoveryAov === experiment.recoveryAov ? 'OBS recovery-specific' : 'fallback'} AOV $${(recoveryAov as number).toFixed(2)}] — existing risk treatment applied per MODEL RULES`,
+  });
+
+  if (deltaRate === 0) {
+    limitations.push(
+      'Recovery experiment showed no incremental effect (treatment rate at or below control rate) — the calculated recovery result is a genuine zero.'
+    );
+  }
+  limitations.push(
+    'Recovery lift is derived from a single documented experiment; sampling error and experiment quality are not independently verified by BRAIN.'
+  );
+
+  return result;
+}
+
 function calculateRetentionPath(
   customersEntering: number | null,
   aov: number | null,
@@ -690,15 +807,69 @@ export function calculateAcrOpportunity(
       )
     : emptyScenario();
 
+  // --- V2D.3: Abandoned-checkout recovery (first-party L3 experiment) ---
+  // AOV hierarchy (V2D.2 §9): recovery-specific OBS → general first-party OBS
+  // (the calculator's existing resolved AOV, which already implements
+  // observed → benchmark) → no defensible AOV = INSUFFICIENT_DATA. A benchmark
+  // AOV may complete otherwise-valid L3 economics — it never substitutes for
+  // missing experiment evidence. A recovery-specific OBS always wins.
+  const experiment = research.recoveryExperiment ?? null;
+  const recoveryActivation: CalculatedMetrics['inputs']['recoveryActivation'] =
+    experiment ? 'experiment' : 'none';
+  const recoveryAov: ResolvedInput = experiment
+    ? experiment.recoveryAov != null && experiment.recoveryAov > 0
+      ? {
+          value: experiment.recoveryAov,
+          basis: 'OBS',
+          provenance: '[OBS] Recovery-specific AOV observed for recovered orders',
+        }
+      : resolved.aov.basis === 'OBS'
+        ? {
+            value: resolved.aov.value,
+            basis: 'OBS',
+            provenance: '[OBS] General first-party AOV used as recovery AOV (no recovery-specific AOV supplied)',
+          }
+        : resolved.aov.value != null
+          ? {
+              value: resolved.aov.value,
+              basis: 'BMK',
+              provenance: '[BMK] Verified category AOV used as recovery AOV — business-specific recovery AOV was not supplied; treat the recovery result as indicative',
+            }
+          : insufficient('Recovery AOV', 'no recovery-specific, observed, or benchmark AOV available')
+    : insufficient('Recovery AOV', 'no documented recovery experiment supplied');
+
+  const recoveryWindowDays: ResolvedInput = experiment
+    ? {
+        value: experiment.windowDays,
+        basis: 'OBS',
+        provenance: `[OBS] Experiment measurement window — ${experiment.windowDays} days, identical across treatment and control arms`,
+      }
+    : insufficient('Recovery measurement window', 'no documented recovery experiment supplied');
+
+  const recovery = calculateRecoveryPath(
+    experiment,
+    recoveryAov.value,
+    maturity,
+    ledger,
+    limitations
+  );
+
   // --- Combined risk-adjusted opportunity ---
+  // V2D.3 population exclusivity: recovery orders are abandoned-checkout
+  // orders — a population disjoint from the baseline buyers flowing into the
+  // Glow Curator counterfactual and the LTV entering population, and disjoint
+  // from baseline conversion revenue. Summing the paths is therefore
+  // additive-safe; the recovery path itself contributes only the between-arm
+  // INCREMENTAL orders (baseline/control recovery is never included).
   const combined: CalculatedMetrics['combined'] = { conservative: null, base: null, upside: null };
   for (const key of SCENARIO_ORDER) {
     const c = conversion[key].realizedRevenueLift;
     const r = retention[key].realizedRevenueLift;
-    if (c === null && r === null) {
+    const v = recovery[key].realizedRevenueLift;
+    if (c === null && r === null && v === null) {
       combined[key] = null;
     } else {
-      const raw = (c ?? 0) + (r ?? 0);
+      const raw = (c ?? 0) + (r ?? 0) + (v ?? 0);
       combined[key] = { low: riskAdjusted(raw, key), high: riskAdjusted(raw, key) };
       // low === high by design: realization + buffer already bound the
       // scenario. The export presents a single risk-adjusted figure.
@@ -709,14 +880,17 @@ export function calculateAcrOpportunity(
   const opportunity: CalculatedMetrics['opportunity'] = {
     conversion: conversion.base.realizedRevenueLift,
     retention: retention.base.realizedRevenueLift,
+    recovery: recovery.base.realizedRevenueLift,
     primary: null,
   };
-  if (opportunity.conversion !== null && opportunity.retention !== null) {
-    opportunity.primary = opportunity.conversion >= opportunity.retention ? 'conversion' : 'retention';
-  } else if (opportunity.conversion !== null) {
-    opportunity.primary = 'conversion';
-  } else if (opportunity.retention !== null) {
-    opportunity.primary = 'retention';
+  const oppCandidates: [string, number | null][] = [
+    ['conversion', opportunity.conversion],
+    ['retention', opportunity.retention],
+    ['recovery', opportunity.recovery],
+  ];
+  const present = oppCandidates.filter(([, v]) => v !== null) as [string, number][];
+  if (present.length > 0) {
+    opportunity.primary = present.reduce((a, b) => (b[1] >= a[1] ? b : a))[0] as CalculatedMetrics['opportunity']['primary'];
   }
 
   // --- Revenue Protection (separate KPI, never deducted) ---
@@ -781,9 +955,13 @@ export function calculateAcrOpportunity(
       industryBasis: industryInfo.basis,
       replenishmentWindow: resolved.replenishmentWindow,
       collectionActivation,
+      recoveryActivation,
+      recoveryAov,
+      recoveryWindowDays,
     },
     conversion,
     retention,
+    recovery,
     combined,
     opportunity,
     revenueProtection: {
@@ -796,7 +974,8 @@ export function calculateAcrOpportunity(
     formulasApplied: [
       'Glow Curator: Participants = Traffic × Participation; Purchases = Completions × Quiz-to-Purchase; Incremental = MAX(0, Purchases − Participants × Baseline CVR), capped at Participants',
       'LTV System: Gap = Benchmark High RPR − Baseline RPR; Projected RPR = clamp(Baseline + Gap × Effective Realization, 0, 1); Additional Buyers = Entering × ΔRPR (available only when a verified ceiling strictly above the baseline exists)',
-      'Combined = (Conversion Lift + Retention Lift) × (1 − Risk Buffer), per scenario',
+      'Recovery (V2D.3): Incremental Rate = max(0, Treatment Rate − Control Rate) from a documented first-party experiment; Incremental Orders = Monthly Eligible × Incremental Rate; Lift = Orders × Recovery AOV (available only with documented treatment/control evidence)',
+      'Combined = (Conversion Lift + Retention Lift + Recovery Lift) × (1 − Risk Buffer), per scenario',
     ],
     dataLimitations: limitations,
   };

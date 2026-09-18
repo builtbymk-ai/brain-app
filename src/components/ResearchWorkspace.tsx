@@ -53,9 +53,34 @@ interface BusinessInput {
   conversionRate: string;
   monthlyBuyers: string;
   repeatPurchaseRate: string;
+  // V2D.3 — documented controlled recovery experiment (raw strings; the API
+  // validates them as ALL-OR-NOTHING L3 evidence. Any supplied-but-invalid
+  // value rejects the research request rather than partially entering the
+  // evidence chain. Empty = no experiment = INSUFFICIENT_DATA recovery state.
+  recovery: {
+    abandonedCheckouts: string;
+    treatmentEligible: string;
+    controlEligible: string;
+    treatmentRecovered: string;
+    controlRecovered: string;
+    windowDays: string;
+    interventionDifference: string;
+    recoveryAov: string;
+  };
 }
 
 type ResearchState = 'idle' | 'loading' | 'done' | 'error';
+
+const EMPTY_RECOVERY: BusinessInput['recovery'] = {
+  abandonedCheckouts: '',
+  treatmentEligible: '',
+  controlEligible: '',
+  treatmentRecovered: '',
+  controlRecovered: '',
+  windowDays: '',
+  interventionDifference: '',
+  recoveryAov: '',
+};
 
 const EMPTY_INPUT: BusinessInput = {
   brandName: '',
@@ -65,7 +90,13 @@ const EMPTY_INPUT: BusinessInput = {
   conversionRate: '',
   monthlyBuyers: '',
   repeatPurchaseRate: '',
+  recovery: { ...EMPTY_RECOVERY },
 };
+
+/** True when any recovery-evidence field has a value. */
+function hasRecoveryInput(r: BusinessInput['recovery']): boolean {
+  return Object.values(r).some((v) => v.trim() !== '');
+}
 
 export function ResearchWorkspace({ userType }: { userType: UserType }) {
   const mode = getModeDefinition(userType);
@@ -124,6 +155,18 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
     setInputs((prev) => prev.map((v, i) => (i === index ? { ...v, [field]: value } : v)));
   }, []);
 
+  /** V2D.3 — update one nested recovery-evidence field for one business row. */
+  const updateRecoveryInput = useCallback(
+    (index: number, field: keyof BusinessInput['recovery'], value: string) => {
+      setInputs((prev) =>
+        prev.map((v, i) =>
+          i === index ? { ...v, recovery: { ...v.recovery, [field]: value } } : v
+        )
+      );
+    },
+    []
+  );
+
   const handleResearch = async () => {
     const filled = inputs.filter((v) => v.url.trim());
     if (filled.length === 0) {
@@ -138,19 +181,27 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
     try {
       // Owner mode carries first-party economics (raw strings — the API
       // validates and normalizes). Prospect mode never sends them (§9).
-      const payloadInputs = filled.map((v) =>
-        userType === 'owner'
-          ? {
-              brandName: v.brandName,
-              url: v.url,
-              proposedSolution: v.proposedSolution,
-              aov: v.aov,
-              conversionRate: v.conversionRate,
-              monthlyBuyers: v.monthlyBuyers,
-              repeatPurchaseRate: v.repeatPurchaseRate,
-            }
-          : { brandName: v.brandName, url: v.url, proposedSolution: v.proposedSolution }
-      );
+      const payloadInputs = filled.map((v) => {
+        if (userType !== 'owner') {
+          return { brandName: v.brandName, url: v.url, proposedSolution: v.proposedSolution };
+        }
+        // V2D.3 — send recovery evidence only when the owner actually entered
+        // any of it; a wholly empty block means "no experiment" and must not
+        // trip the all-or-nothing validation on the server.
+        const withRecovery = hasRecoveryInput(v.recovery)
+          ? { recovery: v.recovery }
+          : {};
+        return {
+          brandName: v.brandName,
+          url: v.url,
+          proposedSolution: v.proposedSolution,
+          aov: v.aov,
+          conversionRate: v.conversionRate,
+          monthlyBuyers: v.monthlyBuyers,
+          repeatPurchaseRate: v.repeatPurchaseRate,
+          ...withRecovery,
+        };
+      });
 
       const body: Record<string, unknown> = { inputs: payloadInputs, userType };
       if (sessionToken) body.token = sessionToken;
@@ -431,6 +482,163 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
                           <span className="rw-performance-help">Share of those customers who bought again in the period.</span>
                         </div>
                       </div>
+
+                      {/* V2D.3 — Documented recovery experiment (L3 evidence).
+                          All-or-nothing: every field below must be filled for
+                          the evidence to be usable; a partially documented
+                          experiment cannot establish incrementality and is
+                          never partially applied. Attributed recovery numbers
+                          ("we recovered 40 orders last month") are NOT this
+                          evidence and are deliberately not asked for. */}
+                      <details className="rw-performance rw-performance-nested">
+                        <summary>
+                          <span aria-hidden="true">◆</span>
+                          <span className="rw-performance-title">Recovery Experiment Evidence</span>
+                          <span className="rw-performance-hint">Optional — enables checkout-recovery lift</span>
+                        </summary>
+                        <p className="rw-performance-note">
+                          For abandoned-checkout recovery solutions only. BRAIN can
+                          estimate potential recovery lift only from a documented
+                          controlled comparison — two groups of abandoned checkouts
+                          over the <strong>same period</strong>: one that received
+                          the recovery intervention (treatment) and one that did
+                          not (control). Numbers like "recovered orders last
+                          month" from your platform's dashboard are{' '}
+                          <strong>not</strong> sufficient — they include customers
+                          who would have purchased anyway. Enter whole numbers
+                          over the same measurement window for both groups.
+                        </p>
+                        <div className="rw-performance-grid">
+                          <div className="rw-performance-field">
+                            <label className="rw-performance-label" htmlFor={`rec-abandoned-${index}`}>
+                              Monthly Abandoned Checkouts <span className="rw-performance-optional">Required together</span>
+                            </label>
+                            <input
+                              id={`rec-abandoned-${index}`}
+                              type="text"
+                              inputMode="numeric"
+                              className="rw-input rw-performance-input"
+                              placeholder="e.g. 1800"
+                              aria-label={`Monthly abandoned checkouts for ${input.brandName || `business ${index + 1}`}`}
+                              value={input.recovery.abandonedCheckouts}
+                              onChange={(e) => updateRecoveryInput(index, 'abandonedCheckouts', e.target.value)}
+                            />
+                            <span className="rw-performance-help">Shoppers who started checkout but did not complete, per month.</span>
+                          </div>
+                          <div className="rw-performance-field">
+                            <label className="rw-performance-label" htmlFor={`rec-tx-${index}`}>
+                              Treatment — Checkouts in Group <span className="rw-performance-optional">Required together</span>
+                            </label>
+                            <input
+                              id={`rec-tx-${index}`}
+                              type="text"
+                              inputMode="numeric"
+                              className="rw-input rw-performance-input"
+                              placeholder="e.g. 900"
+                              aria-label={`Treatment group abandoned checkouts for ${input.brandName || `business ${index + 1}`}`}
+                              value={input.recovery.treatmentEligible}
+                              onChange={(e) => updateRecoveryInput(index, 'treatmentEligible', e.target.value)}
+                            />
+                            <span className="rw-performance-help">Abandoned checkouts that received the recovery intervention.</span>
+                          </div>
+                          <div className="rw-performance-field">
+                            <label className="rw-performance-label" htmlFor={`rec-txr-${index}`}>
+                              Treatment — Orders Recovered <span className="rw-performance-optional">Required together</span>
+                            </label>
+                            <input
+                              id={`rec-txr-${index}`}
+                              type="text"
+                              inputMode="numeric"
+                              className="rw-input rw-performance-input"
+                              placeholder="e.g. 63"
+                              aria-label={`Treatment group recovered orders for ${input.brandName || `business ${index + 1}`}`}
+                              value={input.recovery.treatmentRecovered}
+                              onChange={(e) => updateRecoveryInput(index, 'treatmentRecovered', e.target.value)}
+                            />
+                            <span className="rw-performance-help">Completed orders in the treatment group during the window.</span>
+                          </div>
+                          <div className="rw-performance-field">
+                            <label className="rw-performance-label" htmlFor={`rec-ctl-${index}`}>
+                              Control — Checkouts in Group <span className="rw-performance-optional">Required together</span>
+                            </label>
+                            <input
+                              id={`rec-ctl-${index}`}
+                              type="text"
+                              inputMode="numeric"
+                              className="rw-input rw-performance-input"
+                              placeholder="e.g. 900"
+                              aria-label={`Control group abandoned checkouts for ${input.brandName || `business ${index + 1}`}`}
+                              value={input.recovery.controlEligible}
+                              onChange={(e) => updateRecoveryInput(index, 'controlEligible', e.target.value)}
+                            />
+                            <span className="rw-performance-help">Abandoned checkouts that did NOT receive the intervention (held back).</span>
+                          </div>
+                          <div className="rw-performance-field">
+                            <label className="rw-performance-label" htmlFor={`rec-ctlr-${index}`}>
+                              Control — Orders Recovered <span className="rw-performance-optional">Required together</span>
+                            </label>
+                            <input
+                              id={`rec-ctlr-${index}`}
+                              type="text"
+                              inputMode="numeric"
+                              className="rw-input rw-performance-input"
+                              placeholder="e.g. 27"
+                              aria-label={`Control group recovered orders for ${input.brandName || `business ${index + 1}`}`}
+                              value={input.recovery.controlRecovered}
+                              onChange={(e) => updateRecoveryInput(index, 'controlRecovered', e.target.value)}
+                            />
+                            <span className="rw-performance-help">Completed orders in the control group during the same window.</span>
+                          </div>
+                          <div className="rw-performance-field">
+                            <label className="rw-performance-label" htmlFor={`rec-window-${index}`}>
+                              Measurement Window (days) <span className="rw-performance-optional">Required together</span>
+                            </label>
+                            <input
+                              id={`rec-window-${index}`}
+                              type="text"
+                              inputMode="numeric"
+                              className="rw-input rw-performance-input"
+                              placeholder="e.g. 30"
+                              aria-label={`Measurement window in days for ${input.brandName || `business ${index + 1}`}`}
+                              value={input.recovery.windowDays}
+                              onChange={(e) => updateRecoveryInput(index, 'windowDays', e.target.value)}
+                            />
+                            <span className="rw-performance-help">How long both groups were observed — must be identical for both.</span>
+                          </div>
+                          <div className="rw-performance-field">
+                            <label className="rw-performance-label" htmlFor={`rec-diff-${index}`}>
+                              What the Treatment Received <span className="rw-performance-optional">Required together</span>
+                            </label>
+                            <input
+                              id={`rec-diff-${index}`}
+                              type="text"
+                              maxLength={300}
+                              className="rw-input rw-performance-input"
+                              placeholder="e.g. 3-email recovery sequence vs no emails"
+                              aria-label={`Documented intervention difference for ${input.brandName || `business ${index + 1}`}`}
+                              value={input.recovery.interventionDifference}
+                              onChange={(e) => updateRecoveryInput(index, 'interventionDifference', e.target.value)}
+                            />
+                            <span className="rw-performance-help">Describe what differed between the two groups.</span>
+                          </div>
+                          <div className="rw-performance-field">
+                            <label className="rw-performance-label" htmlFor={`rec-aov-${index}`}>
+                              Recovery Average Order Value <span className="rw-performance-optional">Optional</span>
+                            </label>
+                            <input
+                              id={`rec-aov-${index}`}
+                              type="text"
+                              inputMode="decimal"
+                              className="rw-input rw-performance-input"
+                              placeholder="e.g. 168.00 (USD)"
+                              aria-label={`Recovery average order value in US dollars for ${input.brandName || `business ${index + 1}`}`}
+                              value={input.recovery.recoveryAov}
+                              onChange={(e) => updateRecoveryInput(index, 'recoveryAov', e.target.value)}
+                            />
+                            <span className="rw-performance-help">Average value of recovered orders, if you can observe it. Falls back to your AOV or category benchmarks when blank.</span>
+                          </div>
+                        </div>
+                      </details>
                     </details>
                   )}
                 </div>

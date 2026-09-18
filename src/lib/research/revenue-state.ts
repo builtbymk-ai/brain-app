@@ -56,13 +56,15 @@ export function isTrueZero(calculated: CalculatedMetrics): boolean {
 
 /**
  * Derive the authoritative RevenueState. Consumes the SINGLE-SOURCE
- * classifier's dimension (V2C) — this module performs no intervention text
- * matching of its own. The UI must use this (or a value carried from it) —
- * never re-derive state from a formatted revenue string.
+ * classifier's dimension (V2C) and recovery-activation flag (V2D.3) — this
+ * module performs no intervention text matching of its own. The UI must use
+ * this (or a value carried from it) — never re-derive state from a formatted
+ * revenue string.
  */
 export function deriveRevenueState(
   calculated: CalculatedMetrics,
   dimension: InterventionDimension = 'UNKNOWN',
+  activatesRecoveryPathway = false,
 ): RevenueState {
   // A calculated figure exists — includes genuine zero (TRUE_ZERO is a
   // CALCULATED state, never "unavailable").
@@ -74,11 +76,26 @@ export function deriveRevenueState(
     return 'INSUFFICIENT_DATA';
   }
 
+  // V2D.3 — the abandoned-checkout recovery pathway was engaged (documented
+  // L3 experiment supplied) but produced no figure (e.g. recovery AOV
+  // unresolvable): evidential, not architectural.
+  if (calculated.inputs.recoveryActivation === 'experiment') {
+    return 'INSUFFICIENT_DATA';
+  }
+
   // No data-collection pathway — but the retention/LTV analytical pathway
   // exists for retention-dimension interventions, so their failure is also
   // evidential. (Dimension ≠ pathway support: only RETENTION maps to an
   // existing analytical pathway here; CONVERSION/ACQUISITION/UNKNOWN do not.)
   if (dimension === 'RETENTION') {
+    return 'INSUFFICIENT_DATA';
+  }
+
+  // V2D.3 — the proposed solution is explicitly an abandoned-checkout
+  // recovery intervention (single-source classifier flag): the recovery
+  // pathway now EXISTS, so its failure is evidential (documented experiment
+  // not supplied) rather than architectural.
+  if (activatesRecoveryPathway) {
     return 'INSUFFICIENT_DATA';
   }
 
@@ -103,6 +120,7 @@ const MISSING_INPUT_LABELS: Record<string, string> = {
   aov: 'Average Order Value',
   conversionRate: 'Store conversion rate',
   repeatPurchaseRate: 'Observed Repeat Purchase Rate',
+  recoveryAov: 'Recovery Average Order Value',
 };
 
 function listMissingEvidence(calculated: CalculatedMetrics): string[] {
@@ -134,6 +152,7 @@ export interface RevenueExplanation {
 export function buildRevenueExplanation(
   state: RevenueState,
   calculated: CalculatedMetrics,
+  isRecoveryIntervention = false,
 ): RevenueExplanation {
   if (state === 'CALCULATED') {
     return {
@@ -156,6 +175,26 @@ export function buildRevenueExplanation(
 
   // INSUFFICIENT_DATA — pathway exists, evidence does not establish a lift.
   const missing = listMissingEvidence(calculated);
+
+  // V2D.3 recovery wording (§14): the intervention was recognized as
+  // abandoned-checkout recovery; the missing evidence is the documented
+  // controlled experiment (or its economics) — never attributed recovery.
+  if (isRecoveryIntervention) {
+    const experimentSupplied =
+      calculated.inputs.recoveryActivation === 'experiment';
+    return {
+      statusLine: 'Unavailable',
+      reason:
+        'Insufficient evidence to establish a defensible revenue lift for this calculation pathway.',
+      additionalEvidence: experimentSupplied
+        ? missing.length > 0
+          ? `${missing.join(', ')} is not available. Completing the recovery evidence may allow BRAIN to evaluate the existing recovery pathway.`
+          : 'Completing the recovery experiment evidence may allow BRAIN to evaluate the existing recovery pathway.'
+        : 'A documented recovery experiment — treatment and control outcomes over the same abandoned-checkout population and measurement window — is not available. Providing this first-party experiment evidence may allow BRAIN to evaluate the existing recovery pathway.',
+      why: 'Platform-attributed recovery orders include customers who would have purchased anyway; only a measured between-arm difference establishes a defensible incremental effect.',
+    };
+  }
+
   const retentionBlocked =
     calculated.retention.base.basis === INSUFFICIENT_DATA_BASIS;
 

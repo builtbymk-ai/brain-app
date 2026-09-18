@@ -42,6 +42,16 @@ export interface SolutionClassification {
   dimension: InterventionDimension;
   /** The exact phrases that matched (deduplicated) — transparency/audit trail. */
   matchedPhrases: string[];
+  /**
+   * V2D.3 — true ONLY when the proposed solution explicitly describes
+   * abandoned-CHECKOUT-stage recovery (the exact pathway BRAIN can model with
+   * documented L3 first-party evidence). Cart-stage "cart recovery" alone is
+   * deliberately excluded (different population — V2D.2 §2). This flag never
+   * implies evidence exists; it only routes the recovery-concept solution to
+   * the recovery pathway so its state is INSUFFICIENT_DATA-with-explanation
+   * instead of NOT_SUPPORTED when no experiment is supplied.
+   */
+  activatesRecoveryPathway: boolean;
 }
 
 /**
@@ -97,7 +107,7 @@ export function classifyProposedSolution(
   proposedSolution: string | null | undefined
 ): SolutionClassification {
   if (!proposedSolution || !proposedSolution.trim()) {
-    return { activatesDataCollection: false, dimension: 'UNKNOWN', matchedPhrases: [] };
+    return { activatesDataCollection: false, dimension: 'UNKNOWN', matchedPhrases: [], activatesRecoveryPathway: false };
   }
 
   const text = normalize(proposedSolution);
@@ -108,12 +118,29 @@ export function classifyProposedSolution(
     if (match) matchedPhrases.add(match[0].toLowerCase());
   }
 
+  const activatesRecoveryPathway = RECOVERY_PATTERNS.some((p) => p.test(text));
+
   return {
     activatesDataCollection: matchedPhrases.size > 0,
     dimension: classifyDimension(text),
     matchedPhrases: Array.from(matchedPhrases).sort(),
+    activatesRecoveryPathway,
   };
 }
+
+/**
+ * V2D.3 — abandoned-CHECKOUT recovery concepts only (checkout-stage
+ * population, Definition C/D). Deliberately narrower than the CONVERSION
+ * dimension's cart-recovery family: "cart recovery" without checkout-stage
+ * language targets cart abandoners (Definition A) — a different population
+ * the recovery pathway must NOT silently absorb (V2D.2 §8).
+ */
+const RECOVERY_PATTERNS: RegExp[] = [
+  /\babandoned\s+checkout(?:s)?\b/i,
+  /\bcheckout\s+(?:recovery|recovery\s+emails?|abandonment\s+recovery)\b/i,
+  /\brecover(?:ing|y)?\s+(?:abandoned\s+)?checkouts?\b/i,
+  /\babandoned\s+order(?:s)?\s+recovery\b/i,
+];
 
 // ---------------------------------------------------------------------------
 // Intervention dimension classification (V2C).

@@ -63,23 +63,27 @@ const INTERVENTIONS: InterventionSpec[] = [
 function resultLabel(
   m: CalculatedMetrics,
   dimension?: InterventionDimension,
+  activatesRecoveryPathway = false,
 ): 'CALCULATED' | 'INSUFFICIENT_DATA' | 'TRUE_ZERO' | 'NOT_SUPPORTED' {
   const conv = m.conversion.base;
   const ret = m.retention.base;
-  if (conv.incrementalUnits === null && ret.incrementalUnits === null) {
+  const rec = m.recovery.base;
+  if (conv.incrementalUnits === null && ret.incrementalUnits === null && rec.incrementalUnits === null) {
     // V2B.3: the authoritative three-state derivation, shared with production.
-    const state = deriveRevenueState(m, dimension);
+    // V2D.3: the classifier's recovery flag participates (recovery proposals
+    // without experiment evidence are INSUFFICIENT_DATA, not NOT_SUPPORTED).
+    const state = deriveRevenueState(m, dimension, activatesRecoveryPathway);
     if (state === 'NOT_SUPPORTED') return 'NOT_SUPPORTED';
     return 'INSUFFICIENT_DATA';
   }
-  const anyPositive = [conv.realizedRevenueLift, ret.realizedRevenueLift].some(
+  const anyPositive = [conv.realizedRevenueLift, ret.realizedRevenueLift, rec.realizedRevenueLift].some(
     (v) => v !== null && v > 0
   );
   if (anyPositive) return 'CALCULATED';
-  // Both resolved but zero.
-  const bothResolved =
-    (conv.incrementalUnits !== null || ret.incrementalUnits !== null);
-  if (bothResolved && m.combined.base !== null && m.combined.base.low === 0) return 'TRUE_ZERO';
+  // All paths resolved but zero.
+  const anyResolved =
+    (conv.incrementalUnits !== null || ret.incrementalUnits !== null || rec.incrementalUnits !== null);
+  if (anyResolved && m.combined.base !== null && m.combined.base.low === 0) return 'TRUE_ZERO';
   return 'INSUFFICIENT_DATA';
 }
 
@@ -113,7 +117,7 @@ for (const spec of INTERVENTIONS) {
     { userType: 'prospect', trafficSource: 'estimated' }
   );
 
-  const label = resultLabel(m, cls.dimension);
+  const label = resultLabel(m, cls.dimension, cls.activatesRecoveryPathway);
   const phrases = cls.matchedPhrases.length ? cls.matchedPhrases.join(' | ') : '—';
   console.log(`#${String(spec.n).padStart(2, '0')} ${spec.name} [${spec.dimension}]`);
   console.log(`    classifier: ${cls.activatesDataCollection ? 'ACTIVATES' : 'no match'} ${phrases === '—' ? '' : `(${phrases})`}`);

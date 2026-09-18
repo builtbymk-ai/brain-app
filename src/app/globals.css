@@ -1840,6 +1840,21 @@ h4 {
   }
 }
 
+/* V2D.3 — nested recovery-experiment block: no double border inside the
+   parent performance section, and an indented left rule instead. */
+.rw-performance-nested {
+  border-top: none;
+  border-bottom: none;
+  border-left: 1px solid var(--line);
+  margin-top: 10px;
+  margin-bottom: 0;
+  padding-left: 14px;
+}
+
+.rw-performance-nested .rw-performance-note {
+  margin-top: 8px;
+}
+
 /* Solution-fit cell (prospect mode results) */
 .rw-cell-fit {
   display: block;

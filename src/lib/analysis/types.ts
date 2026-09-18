@@ -55,6 +55,43 @@ export interface PathScenario {
   basis: EvidenceBasis;
 }
 
+/**
+ * V2D.3 — First-party abandoned-checkout recovery experiment evidence (L3).
+ *
+ * Canonical, validated representation of a documented controlled comparison
+ * (V2D.2 audit §5–§6): treatment and control arms over the SAME abandoned-
+ * checkout population, the SAME measurement window, a documented intervention
+ * difference, and measured recovery outcomes. Every numeric field is OBS —
+ * the merchant supplied it from their own experiment. Derived quantities
+ * (rates, incremental effect) are computed by the calculator and labelled DRV.
+ * This type is intake output only; all arithmetic lives in the calculator.
+ */
+export interface RecoveryExperimentEvidence {
+  /**
+   * Monthly abandoned checkouts (checkout-stage abandoners, Definition C).
+   * Opportunity population context [OBS]; the experiment arms define lift.
+   */
+  monthlyAbandonedCheckouts: number;
+  /** Abandoned checkouts in the treatment arm. [OBS] */
+  treatmentEligible: number;
+  /** Abandoned checkouts in the control (holdout) arm. [OBS] */
+  controlEligible: number;
+  /** Orders recovered in the treatment arm during the window. [OBS attributed-arm outcome] */
+  treatmentRecovered: number;
+  /** Orders recovered in the control arm during the window. [OBS] */
+  controlRecovered: number;
+  /** Experiment measurement window in days (arm-identical). [OBS setting] */
+  windowDays: number;
+  /** What differs between treatment and control (documented intervention). */
+  interventionDifference: string;
+  /**
+   * Recovery-specific average order value of recovered orders (USD), when the
+   * merchant can observe it. Absent = fall back to the V2D.2 AOV hierarchy
+   * (general OBS AOV → verified category benchmark) resolved by the calculator.
+   */
+  recoveryAov?: number;
+}
+
 /** input → formula → output trace for one calculation step. */
 export interface FormulaStep {
   formula: string;
@@ -100,19 +137,36 @@ export interface CalculatedMetrics {
     automationMaturity: AutomationMaturity;
     industry: IndustryKey;
     industryBasis: string;
-    replenishmentWindow: string;
+    replenishmentWindow: string;    /**
+   * How the data-collection funnel was activated:
+   *   'observed'       — existing on-site mechanism (hasQuiz === true) [OBS]
+   *   'counterfactual' — created by the proposed solution (hasQuiz === false,
+   *                      solutionActivatesDataCollection === true)
+   *   'none'           — no mechanism observed or proposed
+   */
+  collectionActivation: 'observed' | 'counterfactual' | 'none';
     /**
-     * How the data-collection funnel was activated:
-     *   'observed'       — existing on-site mechanism (hasQuiz === true) [OBS]
-     *   'counterfactual' — created by the proposed solution (hasQuiz === false,
-     *                      solutionActivatesDataCollection === true)
-     *   'none'           — no mechanism observed or proposed
+     * V2D.3 — recovery-path activation state:
+     *   'experiment' — documented L3 treatment/control evidence supplied [OBS]
+     *   'none'       — no experiment (attributed recovery / population only /
+     *                  nothing) → recovery is INSUFFICIENT_DATA or NOT_SUPPORTED
      */
-    collectionActivation: 'observed' | 'counterfactual' | 'none';
+    recoveryActivation: 'experiment' | 'none';
+    /** V2D.3 — resolved recovery AOV, after the V2D.2 hierarchy. */
+    recoveryAov: ResolvedInput;
+    /** V2D.3 — the mandatory experiment measurement window (days). */
+    recoveryWindowDays: ResolvedInput;
   };
 
   conversion: Record<ScenarioKey, PathScenario>;
   retention: Record<ScenarioKey, PathScenario>;
+
+  /**
+   * V2D.3 — Abandoned-checkout recovery path (first-party L3 experiment).
+   * Populated only when documented treatment/control evidence exists.
+   * Null scenarios = INSUFFICIENT_DATA for this path.
+   */
+  recovery: Record<ScenarioKey, PathScenario>;
 
   /** Risk-adjusted combined opportunity per scenario (USD). */
   combined: Record<ScenarioKey, { low: number; high: number } | null>;
@@ -121,7 +175,8 @@ export interface CalculatedMetrics {
   opportunity: {
     conversion: number | null;
     retention: number | null;
-    primary: 'conversion' | 'retention' | null;
+    recovery: number | null;
+    primary: 'conversion' | 'retention' | 'recovery' | null;
   };
 
   /** Revenue Protection is reported separately — never deducted from opportunity. */
@@ -159,6 +214,12 @@ export interface CalculatorResearchData {
   observedMonthlyBuyers?: number | null;
   /** Observed AOV (USD) if ever established. */
   observedAov?: number | null;
+  /**
+   * V2D.3 — documented controlled recovery experiment (L3 evidence), when the
+   * merchant supplied one. Absent/null = no experiment: the recovery pathway
+   * is evidentially unavailable (L0–L2 → INSUFFICIENT_DATA).
+   */
+  recoveryExperiment?: RecoveryExperimentEvidence | null;
 }
 
 /** Applicable benchmark records handed to the calculator (metadata preserved). */

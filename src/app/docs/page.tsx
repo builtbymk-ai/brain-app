@@ -188,6 +188,40 @@ export default function DocumentationPage() {
             </p>
           </section>
 
+          {/* Recovery evidence boundary (V2D) */}
+          <section className="docs-section" aria-labelledby="docs-recovery">
+            <h2 id="docs-recovery" className="docs-heading">
+              Abandoned-checkout recovery evidence
+            </h2>
+            <p className="docs-copy">
+              BRAIN can assess potential revenue lift for abandoned-checkout
+              recovery interventions, but only from <strong>first-party
+              controlled-comparison evidence</strong>. Every mainstream platform
+              reports <em>attributed</em> recovery — orders credited to a
+              recovery flow — and attributed orders include customers who would
+              have purchased anyway. Attributed recovery is real performance,
+              but it is not incremental impact, so it never drives the revenue
+              estimate.
+            </p>
+            <p className="docs-copy">
+              A defensible recovery estimate requires a documented experiment:
+              two comparable groups of abandoned checkouts over the{' '}
+              <strong>same measurement window</strong> — one receiving the
+              recovery intervention (treatment) and one deliberately held back
+              (control) — with the recovered orders of each group recorded. The
+              lift is derived from the <strong>difference between the two
+              groups</strong> only; the control group's own recovery is treated
+              as baseline and is never counted as new revenue.
+            </p>
+            <p className="docs-copy">
+              Without documented experiment evidence, the Potential Revenue Lift
+              for a recovery intervention reports{' '}
+              <em>Insufficient Data</em> and names what is missing — this is
+              BRAIN's evidence standard working as designed, not a failure of
+              the tool.
+            </p>
+          </section>
+
           {/* Determinism + IP boundary */}
           <section className="docs-section" aria-labelledby="docs-method">
             <h2 id="docs-method" className="docs-heading">

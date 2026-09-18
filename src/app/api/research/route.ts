@@ -4,6 +4,11 @@ import { researchBusiness } from '@/lib/research/engine';
 import { generateId, generateToken } from '@/lib/id';
 import { applyPaywall, isSessionPaid } from '@/lib/paywall';
 import { validateFirstPartyInput, ValidatedFirstPartyInput } from '@/lib/research/first-party';
+import {
+  validateRecoveryEvidence,
+  hasRecoveryEvidence,
+  RecoveryValidationResult,
+} from '@/lib/research/recovery-evidence';
 import { eq } from 'drizzle-orm';
 
 export const runtime = 'nodejs';
@@ -54,6 +59,12 @@ export async function POST(request: Request) {
     conversionRate?: unknown;
     monthlyBuyers?: unknown;
     repeatPurchaseRate?: unknown;
+    /**
+     * V2D.3 — raw documented controlled recovery experiment (L3 evidence).
+     * Validated as a whole by validateRecoveryEvidence(); never partially
+     * accepted. Owner mode only.
+     */
+    recovery?: Record<string, unknown>;
   }
 
   let body: { inputs?: (BusinessInput & { userType?: unknown })[] | string[] | string; token?: string; userType?: unknown };
@@ -86,6 +97,9 @@ export async function POST(request: Request) {
           conversionRate: item.conversionRate,
           monthlyBuyers: item.monthlyBuyers,
           repeatPurchaseRate: item.repeatPurchaseRate,
+          recovery: typeof item.recovery === 'object' && item.recovery !== null && !Array.isArray(item.recovery)
+            ? (item.recovery as Record<string, unknown>)
+            : undefined,
         };
       }
       return null;
@@ -105,12 +119,28 @@ export async function POST(request: Request) {
   // not. Invalid values REJECT the request (never clamp — a silently-capped
   // number would enter the evidence chain looking plausible).
   const firstPartyByIndex = new Map<number, ValidatedFirstPartyInput>();
+  // V2D.3 — validated documented recovery experiments, per business index.
+  const recoveryByIndex = new Map<number, RecoveryValidationResult['values']>();
   if (userType === 'owner') {
     const fieldErrors: { index: number; field: string; message: string }[] = [];
     rawInputs.forEach((input, index) => {
       const { values, errors } = validateFirstPartyInput(input as unknown as Record<string, unknown>);
       firstPartyByIndex.set(index, values);
       errors.forEach((e) => fieldErrors.push({ index, field: e.field, message: e.message }));
+
+      // V2D.3 — recovery experiment intake (owner mode only, §18). Evidence
+      // rules are all-or-nothing: any supplied-but-invalid experiment REJECTS
+      // the request (reject-never-clamp) rather than partially entering the
+      // evidence chain. Prospect mode ignores it entirely.
+      if (input.recovery && hasRecoveryEvidence(input.recovery)) {
+        const { values, errors: recoveryErrors } = validateRecoveryEvidence(input.recovery);
+        if (values) {
+          recoveryByIndex.set(index, values);
+        }
+        recoveryErrors.forEach((e) =>
+          fieldErrors.push({ index, field: e.field, message: e.message })
+        );
+      }
     });
     if (fieldErrors.length > 0) {
       return NextResponse.json(
@@ -160,11 +190,23 @@ export async function POST(request: Request) {
           // Canonical fields only: the raw first-party numbers never leak past
           // validation into the engine — the validated/normalized values travel
           // as firstPartyEconomics (calculator representation).
-          const { aov: _a, conversionRate: _c, monthlyBuyers: _b, repeatPurchaseRate: _r, ...core } = input;
+          const {
+            aov: _a,
+            conversionRate: _c,
+            monthlyBuyers: _b,
+            repeatPurchaseRate: _r,
+            recovery: _recovery,
+            ...core
+          } = input;
           return researchBusiness({
             ...core,
             userType,
             firstPartyEconomics: firstPartyByIndex.get(i + idx),
+            // V2D.3 — canonical, validated RecoveryExperimentEvidence only.
+            // Raw intake never crosses this boundary.
+            ...(recoveryByIndex.has(i + idx)
+              ? { recoveryExperiment: recoveryByIndex.get(i + idx) }
+              : {}),
           });
         })
       );
