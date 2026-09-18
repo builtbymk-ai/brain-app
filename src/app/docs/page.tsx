@@ -103,6 +103,38 @@ export default function DocumentationPage() {
               market, and infrastructure failure modes. BRAIN does not
               guarantee any revenue outcome, and actual results will differ.
             </p>
+            <p className="docs-copy">
+              Every research result carries one of three revenue states:
+            </p>
+            <dl className="evidence-guide-list docs-evidence-list">
+              <div className="evidence-guide-item">
+                <dt>Calculated</dt>
+                <dd>
+                  A revenue estimate was produced because the applicable
+                  calculation pathway had sufficient evidence. This includes a
+                  genuine calculated zero — a defensible $0/mo result is a
+                  calculation, not a gap.
+                </dd>
+              </div>
+              <div className="evidence-guide-item">
+                <dt>Insufficient Data</dt>
+                <dd>
+                  BRAIN has a calculation pathway for the intervention, but the
+                  available evidence is insufficient to establish a defensible
+                  revenue estimate. The report names the specific evidence that
+                  is missing — for example, an observed repeat purchase rate.
+                </dd>
+              </div>
+              <div className="evidence-guide-item">
+                <dt>Not Supported</dt>
+                <dd>
+                  BRAIN does not currently have a validated calculation pathway
+                  for the intervention. The intervention can still be assessed
+                  qualitatively, but BRAIN will not manufacture a revenue
+                  estimate without a defensible calculation model.
+                </dd>
+              </div>
+            </dl>
           </section>
 
           {/* Benchmark provenance */}

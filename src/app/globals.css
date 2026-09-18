@@ -1626,6 +1626,43 @@ h4 {
   color: var(--muted);
 }
 
+/* V2B.3 — Not Supported state: same quiet column treatment as Unavailable,
+   visually distinct only by wording. No loud colors. */
+.rw-cell-unsupported {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 140px;
+}
+
+/* V2B.3 — Revenue Calculation structured states (INSUFFICIENT_DATA /
+   NOT_SUPPORTED): concise Status/Reason lines, no proprietary mechanics. */
+.rw-cell-calc-state {
+  gap: 3px;
+}
+
+.rw-cell-calc-status {
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--fg);
+}
+
+.rw-cell-calc-reason {
+  color: var(--muted);
+}
+
+/* V2B.3 — business-name evidence note under the Unavailable status line
+   (e.g. "Observed Repeat Purchase Rate is not available…"). */
+.rw-cell-evidence-note {
+  font-family: var(--font-sans);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--fg);
+  opacity: 0.85;
+  overflow-wrap: anywhere;
+}
+
 /* Evidence Guide — compact collapsible explainer for the evidence tags.
    Deliberately understated so it never competes with the form. */
 .evidence-guide {
@@ -1694,6 +1731,112 @@ h4 {
   }
   .evidence-guide-item dd {
     font-size: 0.76rem;
+  }
+}
+
+/* ============================================================
+   V2B.1 — Business Performance Data (Owner-mode first-party intake)
+   Deliberately understated: a collapsed disclosure per business row,
+   styled like the Evidence Guide so it never competes with the form.
+   ============================================================ */
+.rw-performance {
+  display: block;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin-top: 14px;
+  margin-bottom: 6px;
+  padding: 10px 0;
+}
+
+.rw-performance summary {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-sans);
+}
+
+.rw-performance summary::-webkit-details-marker {
+  display: none;
+}
+
+.rw-performance summary:hover .rw-performance-title {
+  color: var(--turquoise-dark);
+}
+
+.rw-performance-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--deep-teal);
+}
+
+.rw-performance-hint {
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.rw-performance-note {
+  font-family: var(--font-sans);
+  font-size: 0.74rem;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 10px 0 12px;
+  max-width: 62ch;
+}
+
+.rw-performance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.rw-performance-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.rw-performance-label {
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--turquoise-dark);
+}
+
+.rw-performance-optional {
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--muted);
+}
+
+.rw-performance-input {
+  flex: none;
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 0.85rem;
+}
+
+.rw-performance-help {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* Mobile: the performance grid stacks; keep the section breathing. */
+@media (max-width: 767px) {
+  .rw-performance-grid {
+    grid-template-columns: 1fr;
+  }
+  .rw-performance summary {
+    flex-wrap: wrap;
   }
 }
 

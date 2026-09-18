@@ -3,6 +3,7 @@ import { db, schema } from '@/db/client';
 import { researchBusiness } from '@/lib/research/engine';
 import { generateId, generateToken } from '@/lib/id';
 import { applyPaywall, isSessionPaid } from '@/lib/paywall';
+import { validateFirstPartyInput, ValidatedFirstPartyInput } from '@/lib/research/first-party';
 import { eq } from 'drizzle-orm';
 
 export const runtime = 'nodejs';
@@ -48,6 +49,11 @@ export async function POST(request: Request) {
     url: string;
     brandName?: string;
     proposedSolution?: string;
+    /** V2B.1 owner-mode first-party economics (raw, validated below). */
+    aov?: unknown;
+    conversionRate?: unknown;
+    monthlyBuyers?: unknown;
+    repeatPurchaseRate?: unknown;
   }
 
   let body: { inputs?: (BusinessInput & { userType?: unknown })[] | string[] | string; token?: string; userType?: unknown };
@@ -76,6 +82,10 @@ export async function POST(request: Request) {
           brandName: typeof item.brandName === 'string' ? item.brandName.slice(0, 120) : undefined,
           proposedSolution:
             typeof item.proposedSolution === 'string' ? item.proposedSolution.slice(0, 1000) : undefined,
+          aov: item.aov,
+          conversionRate: item.conversionRate,
+          monthlyBuyers: item.monthlyBuyers,
+          repeatPurchaseRate: item.repeatPurchaseRate,
         };
       }
       return null;
@@ -87,6 +97,30 @@ export async function POST(request: Request) {
   }
   if (rawInputs.length > 10) {
     return NextResponse.json({ error: 'Up to 10 businesses per session' }, { status: 400 });
+  }
+
+  // V2B.1 — First-party economics are an Owner-mode input contract. Prospect
+  // mode intentionally does not accept them (§9): the owner supplies verified
+  // business data about a business they operate; a prospect researcher does
+  // not. Invalid values REJECT the request (never clamp — a silently-capped
+  // number would enter the evidence chain looking plausible).
+  const firstPartyByIndex = new Map<number, ValidatedFirstPartyInput>();
+  if (userType === 'owner') {
+    const fieldErrors: { index: number; field: string; message: string }[] = [];
+    rawInputs.forEach((input, index) => {
+      const { values, errors } = validateFirstPartyInput(input as unknown as Record<string, unknown>);
+      firstPartyByIndex.set(index, values);
+      errors.forEach((e) => fieldErrors.push({ index, field: e.field, message: e.message }));
+    });
+    if (fieldErrors.length > 0) {
+      return NextResponse.json(
+        {
+          error: 'First-party business data could not be used.',
+          details: fieldErrors.map((e) => `Business ${e.index + 1} — ${e.message}`),
+        },
+        { status: 400 }
+      );
+    }
   }
 
   let sessionToken = body.token ?? generateToken();
@@ -121,7 +155,19 @@ export async function POST(request: Request) {
     const results = [];
     for (let i = 0; i < rawInputs.length; i += 3) {
       const chunk = rawInputs.slice(i, i + 3);
-      const chunkResults = await Promise.all(chunk.map((input) => researchBusiness({ ...input, userType })));
+      const chunkResults = await Promise.all(
+        chunk.map((input, idx) => {
+          // Canonical fields only: the raw first-party numbers never leak past
+          // validation into the engine — the validated/normalized values travel
+          // as firstPartyEconomics (calculator representation).
+          const { aov: _a, conversionRate: _c, monthlyBuyers: _b, repeatPurchaseRate: _r, ...core } = input;
+          return researchBusiness({
+            ...core,
+            userType,
+            firstPartyEconomics: firstPartyByIndex.get(i + idx),
+          });
+        })
+      );
       results.push(...chunkResults);
 
       // Persist each completed business as we go so a session never fully loses data.
@@ -144,6 +190,9 @@ export async function POST(request: Request) {
             reviews: r.reviews,
             quiz: r.quiz,
             revenueOpportunity: r.revenueOpportunity,
+            revenueState: r.revenueState,
+            revenueExplanation: r.revenueExplanation,
+            revenueCalculation: r.revenueCalculation,
             growthAssessment: r.growthAssessment,
             rawSignals: r.rawSignals,
             analysis: r.analysis as never,
@@ -192,6 +241,8 @@ function stripSignals(r: NonNullable<Awaited<ReturnType<typeof researchBusiness>
     reviews: r.reviews,
     quiz: r.quiz,
     revenueOpportunity: r.revenueOpportunity,
+    revenueState: r.revenueState,
+    revenueExplanation: r.revenueExplanation,
     revenueCalculation: r.revenueCalculation,
     growthAssessment: r.growthAssessment,
     analysis: r.analysis,

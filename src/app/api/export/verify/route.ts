@@ -120,6 +120,13 @@ export async function POST(request: Request) {
       reviews: r.reviews ?? 'Not found',
       quiz: r.quiz ?? 'Not found',
       revenueOpportunity: r.revenueOpportunity ?? 'Unavailable',
+      // V2B.3 state restoration (legacy rows pre-date the columns).
+      revenueState:
+        r.revenueState === 'INSUFFICIENT_DATA' || r.revenueState === 'NOT_SUPPORTED'
+          ? r.revenueState
+          : 'CALCULATED',
+      revenueExplanation: (r.revenueExplanation as never) ?? null,
+      revenueCalculation: r.revenueCalculation ?? undefined,
       growthAssessment: r.growthAssessment ?? 'Unavailable',
       rawSignals: (r.rawSignals as never) ?? {},
       analysis: (r.analysis as never) ?? null,

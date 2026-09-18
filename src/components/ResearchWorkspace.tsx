@@ -20,6 +20,17 @@ interface ResearchResult {
   reviews: string;
   quiz: string;
   revenueOpportunity: string;
+  /**
+   * V2B.3 — authoritative analytical state carried from the research engine
+   * (never inferred in the UI from the revenue display string).
+   */
+  revenueState?: 'CALCULATED' | 'INSUFFICIENT_DATA' | 'NOT_SUPPORTED';
+  revenueExplanation?: {
+    statusLine: string;
+    reason: string;
+    additionalEvidence: string | null;
+    why: string | null;
+  } | null;
   revenueCalculation?: string;
   growthAssessment: string;
   analysis?: {
@@ -36,11 +47,25 @@ interface BusinessInput {
   brandName: string;
   url: string;
   proposedSolution: string;
+  // V2B.1 — Owner-mode first-party economics (raw strings; the API validates
+  // and normalizes them. Empty string = not supplied = benchmark fallback).
+  aov: string;
+  conversionRate: string;
+  monthlyBuyers: string;
+  repeatPurchaseRate: string;
 }
 
 type ResearchState = 'idle' | 'loading' | 'done' | 'error';
 
-const EMPTY_INPUT: BusinessInput = { brandName: '', url: '', proposedSolution: '' };
+const EMPTY_INPUT: BusinessInput = {
+  brandName: '',
+  url: '',
+  proposedSolution: '',
+  aov: '',
+  conversionRate: '',
+  monthlyBuyers: '',
+  repeatPurchaseRate: '',
+};
 
 export function ResearchWorkspace({ userType }: { userType: UserType }) {
   const mode = getModeDefinition(userType);
@@ -111,7 +136,23 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
     setResults([]);
 
     try {
-      const body: Record<string, unknown> = { inputs: filled, userType };
+      // Owner mode carries first-party economics (raw strings — the API
+      // validates and normalizes). Prospect mode never sends them (§9).
+      const payloadInputs = filled.map((v) =>
+        userType === 'owner'
+          ? {
+              brandName: v.brandName,
+              url: v.url,
+              proposedSolution: v.proposedSolution,
+              aov: v.aov,
+              conversionRate: v.conversionRate,
+              monthlyBuyers: v.monthlyBuyers,
+              repeatPurchaseRate: v.repeatPurchaseRate,
+            }
+          : { brandName: v.brandName, url: v.url, proposedSolution: v.proposedSolution }
+      );
+
+      const body: Record<string, unknown> = { inputs: payloadInputs, userType };
       if (sessionToken) body.token = sessionToken;
 
       const res = await fetch('/api/research', {
@@ -133,7 +174,10 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Research failed. Please try again.');
+        const detail = Array.isArray(data.details) && data.details.length > 0
+          ? ` ${data.details.join(' ')}`
+          : '';
+        setError((data.error || 'Research failed. Please try again.') + detail);
         setState('error');
         return;
       }
@@ -301,6 +345,94 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
                       ×
                     </button>
                   )}
+
+                  {/* V2B.1 — Business Performance Data (Owner mode only),
+                      scoped to THIS business. Optional first-party economics
+                      the owner supplies from their own analytics/order
+                      history. Values are treated as observed [OBS] evidence
+                      and take precedence over benchmark fallbacks in the ACR
+                      model. No proprietary model internals are exposed. */}
+                  {userType === 'owner' && (
+                    <details className="rw-performance">
+                      <summary>
+                        <span aria-hidden="true">◆</span>
+                        <span className="rw-performance-title">Business Performance Data</span>
+                        <span className="rw-performance-hint">Optional — improves precision</span>
+                      </summary>
+                      <p className="rw-performance-note">
+                        Optional numbers from your own store analytics or order
+                        history, for the same recent period (for example, the
+                        last 30 days). Anything you leave blank is researched
+                        from public sources and industry benchmarks instead.
+                      </p>
+                      <div className="rw-performance-grid">
+                        <div className="rw-performance-field">
+                          <label className="rw-performance-label" htmlFor={`fp-aov-${index}`}>
+                            Average Order Value <span className="rw-performance-optional">Optional</span>
+                          </label>
+                          <input
+                            id={`fp-aov-${index}`}
+                            type="text"
+                            inputMode="decimal"
+                            className="rw-input rw-performance-input"
+                            placeholder="e.g. 54.20 (USD)"
+                            aria-label={`Average Order Value in US dollars for ${input.brandName || `business ${index + 1}`}`}
+                            value={input.aov}
+                            onChange={(e) => updateInput(index, 'aov', e.target.value)}
+                          />
+                          <span className="rw-performance-help">Average revenue per completed order.</span>
+                        </div>
+                        <div className="rw-performance-field">
+                          <label className="rw-performance-label" htmlFor={`fp-cvr-${index}`}>
+                            Store Conversion Rate <span className="rw-performance-optional">Optional</span>
+                          </label>
+                          <input
+                            id={`fp-cvr-${index}`}
+                            type="text"
+                            inputMode="decimal"
+                            className="rw-input rw-performance-input"
+                            placeholder="e.g. 2.6 (%)"
+                            aria-label={`Store conversion rate percent for ${input.brandName || `business ${index + 1}`}`}
+                            value={input.conversionRate}
+                            onChange={(e) => updateInput(index, 'conversionRate', e.target.value)}
+                          />
+                          <span className="rw-performance-help">Completed purchases divided by store sessions, as a percent.</span>
+                        </div>
+                        <div className="rw-performance-field">
+                          <label className="rw-performance-label" htmlFor={`fp-buyers-${index}`}>
+                            Monthly Buyers <span className="rw-performance-optional">Optional</span>
+                          </label>
+                          <input
+                            id={`fp-buyers-${index}`}
+                            type="text"
+                            inputMode="numeric"
+                            className="rw-input rw-performance-input"
+                            placeholder="e.g. 2400"
+                            aria-label={`Monthly buyers for ${input.brandName || `business ${index + 1}`}`}
+                            value={input.monthlyBuyers}
+                            onChange={(e) => updateInput(index, 'monthlyBuyers', e.target.value)}
+                          />
+                          <span className="rw-performance-help">Customers who bought during the period — not order count.</span>
+                        </div>
+                        <div className="rw-performance-field">
+                          <label className="rw-performance-label" htmlFor={`fp-rpr-${index}`}>
+                            Repeat Purchase Rate <span className="rw-performance-optional">Optional</span>
+                          </label>
+                          <input
+                            id={`fp-rpr-${index}`}
+                            type="text"
+                            inputMode="decimal"
+                            className="rw-input rw-performance-input"
+                            placeholder="e.g. 18 (%)"
+                            aria-label={`Repeat purchase rate percent for ${input.brandName || `business ${index + 1}`}`}
+                            value={input.repeatPurchaseRate}
+                            onChange={(e) => updateInput(index, 'repeatPurchaseRate', e.target.value)}
+                          />
+                          <span className="rw-performance-help">Share of those customers who bought again in the period.</span>
+                        </div>
+                      </div>
+                    </details>
+                  )}
                 </div>
               ))}
             </div>
@@ -438,7 +570,34 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
                           <td>{r.reviews}</td>
                           <td>{r.quiz}</td>
                           <td className="td-bold">
-                            {r.revenueOpportunity === 'Unavailable' ? (
+                            {/* V2B.3 evidence-boundary states. The authoritative
+                                state arrives from the engine via revenueState;
+                                legacy sessions without it fall back to the
+                                string check. A calculated value (including a
+                                genuine $0/mo) renders as-is. */}
+                            {r.revenueState === 'INSUFFICIENT_DATA' ? (
+                              <span className="rw-cell-unavailable">
+                                {r.revenueExplanation?.statusLine ?? 'Unavailable'}
+                                <span className="rw-cell-unavailable-note">
+                                  {r.revenueExplanation?.reason ??
+                                    'Insufficient business evidence'}
+                                </span>
+                                {r.revenueExplanation?.additionalEvidence && (
+                                  <span className="rw-cell-evidence-note">
+                                    {r.revenueExplanation.additionalEvidence}
+                                  </span>
+                                )}
+                              </span>
+                            ) : r.revenueState === 'NOT_SUPPORTED' ? (
+                              <span className="rw-cell-unsupported">
+                                {r.revenueExplanation?.statusLine ?? 'Not currently supported'}
+                                <span className="rw-cell-unavailable-note">
+                                  {r.revenueExplanation?.reason ??
+                                    'No validated revenue calculation pathway for this intervention.'}
+                                </span>
+                              </span>
+                            ) : r.revenueState === undefined &&
+                              r.revenueOpportunity === 'Unavailable' ? (
                               <span className="rw-cell-unavailable">
                                 Unavailable
                                 <span className="rw-cell-unavailable-note">
@@ -452,9 +611,35 @@ export function ResearchWorkspace({ userType }: { userType: UserType }) {
                             )}
                           </td>
                           <td>
-                            <span className="rw-cell-calc" title="Deterministic ACR calculation — see Documentation for provenance">
-                              {r.revenueCalculation || '—'}
-                            </span>
+                            {r.revenueState === 'INSUFFICIENT_DATA' ||
+                            r.revenueState === 'NOT_SUPPORTED' ? (
+                              <span
+                                className={`rw-cell-calc rw-cell-calc-state rw-cell-calc-state-${
+                                  r.revenueState === 'INSUFFICIENT_DATA'
+                                    ? 'insufficient'
+                                    : 'unsupported'
+                                }`}
+                              >
+                                <span className="rw-cell-calc-status">
+                                  Status: {r.revenueState === 'INSUFFICIENT_DATA' ? 'INSUFFICIENT_DATA' : 'NOT_SUPPORTED'}
+                                </span>
+                                <span className="rw-cell-calc-reason">
+                                  {r.revenueState === 'INSUFFICIENT_DATA'
+                                    ? 'Reason: Required evidence is not sufficient to establish a defensible revenue lift.'
+                                    : 'Reason: No validated revenue calculation pathway currently exists for this intervention.'}
+                                </span>
+                                {r.revenueState === 'INSUFFICIENT_DATA' &&
+                                  r.revenueExplanation?.additionalEvidence && (
+                                    <span className="rw-cell-calc-reason">
+                                      Additional evidence: {r.revenueExplanation.additionalEvidence}.
+                                    </span>
+                                  )}
+                              </span>
+                            ) : (
+                              <span className="rw-cell-calc" title="Deterministic ACR calculation — see Documentation for provenance">
+                                {r.revenueCalculation || '—'}
+                              </span>
+                            )}
                           </td>
                           <td>{r.growthAssessment}</td>
                           <td>

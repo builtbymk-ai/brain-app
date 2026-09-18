@@ -1,8 +1,65 @@
 import { BusinessResult, AnalysisResult } from '../research/types';
 import { UserType } from '../analysis/types';
+import {
+  EXPORT_STATUS_CALCULATED,
+  EXPORT_STATUS_HEADER,
+  EXPORT_STATUS_INSUFFICIENT_DATA,
+  EXPORT_STATUS_NOT_SUPPORTED,
+  EXPORT_INSUFFICIENT_DATA_CALCULATION,
+  EXPORT_NOT_SUPPORTED_CALCULATION,
+  type RevenueState,
+} from '../research/revenue-state';
 
 export interface ExportRowPayload {
   business: BusinessResult;
+}
+
+/**
+ * V2B.3 — map the authoritative RevenueState to its export representation.
+ * The status is NEVER encoded indirectly ("$0", blank, "N/A") — a downstream
+ * consumer must be able to distinguish CALCULATED (incl. true zero) from
+ * INSUFFICIENT_DATA and NOT_SUPPORTED unambiguously.
+ */
+function exportRevenueStatus(
+  state: RevenueState | undefined,
+): string {
+  switch (state) {
+    case 'CALCULATED':
+      return EXPORT_STATUS_CALCULATED;
+    case 'INSUFFICIENT_DATA':
+      return EXPORT_STATUS_INSUFFICIENT_DATA;
+    case 'NOT_SUPPORTED':
+      return EXPORT_STATUS_NOT_SUPPORTED;
+    // Legacy persisted rows (pre-V2B.3) carry no state; keep the export
+    // schema total rather than emitting undefined.
+    default:
+      return EXPORT_STATUS_CALCULATED;
+  }
+}
+
+/**
+ * V2B.3 — RevenueCalculation cell semantics per state. CALCULATED keeps the
+ * existing evidence-tagged trail verbatim; the two non-calculated states get
+ * a concise structured limitation (no proprietary coefficients or formulas).
+ */
+function exportRevenueCalculation(business: BusinessResult): string {
+  const existing = business.revenueCalculation?.trim();
+  switch (business.revenueState) {
+    case 'INSUFFICIENT_DATA':
+      return [
+        EXPORT_INSUFFICIENT_DATA_CALCULATION,
+        business.revenueExplanation?.additionalEvidence
+          ? `Additional evidence: ${business.revenueExplanation.additionalEvidence}.`
+          : null,
+        business.revenueExplanation?.why ? `Why: ${business.revenueExplanation.why}` : null,
+      ]
+        .filter(Boolean)
+        .join(' ');
+    case 'NOT_SUPPORTED':
+      return EXPORT_NOT_SUPPORTED_CALCULATION;
+    default:
+      return existing ?? 'Unavailable';
+  }
 }
 
 /** Narrow the jsonb-persisted analysis into its premium fields.
@@ -43,6 +100,7 @@ function csvHeaders(userType: UserType): readonly string[] {
         'Reviews',
         'OnsiteDataCollection',
         'PotentialRevenueLift',
+        EXPORT_STATUS_HEADER,
         'RevenueCalculation',
         'GrowthAssessment',
         'SolutionImpact',
@@ -57,6 +115,7 @@ function csvHeaders(userType: UserType): readonly string[] {
         'Reviews',
         'OnsiteDataCollection',
         'PotentialRevenueLift',
+        EXPORT_STATUS_HEADER,
         'RevenueCalculation',
         'GrowthAssessment',
         'SolutionImpact',
@@ -82,7 +141,8 @@ export function toCsv(businesses: ExportRowPayload[], userType: UserType = 'owne
       business.reviews,
       business.quiz,
       business.revenueOpportunity,
-      business.revenueCalculation ?? 'Unavailable',
+      exportRevenueStatus(business.revenueState),
+      exportRevenueCalculation(business),
       business.growthAssessment,
       solutionImpact,
       premium,
@@ -115,7 +175,8 @@ export function toJson(businesses: ExportRowPayload[], userType: UserType = 'own
           // terminology.
           onsiteDataCollection: business.quiz,
           potentialRevenueLift: business.revenueOpportunity,
-          revenueCalculation: business.revenueCalculation ?? null,
+          revenueStatus: exportRevenueStatus(business.revenueState),
+          revenueCalculation: exportRevenueCalculation(business),
           growthAssessment: business.growthAssessment,
           solutionImpact,
           ...(userType === 'owner' ? { priorityChanges: premium } : { angleOfPitch: premium }),

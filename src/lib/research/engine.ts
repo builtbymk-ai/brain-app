@@ -10,6 +10,13 @@ import { classifyProposedSolution } from '../analysis/solution-classifier';
 import { calculateAcrOpportunity } from '../analysis/calculator';
 import { CalculatedMetrics } from '../analysis/types';
 import { BusinessResult, CapturedSignals, UserType } from './types';
+import {
+  deriveRevenueState,
+  buildRevenueExplanation,
+  type RevenueExplanation,
+  type RevenueState,
+} from './revenue-state';
+import { ValidatedFirstPartyInput } from './first-party';
 import { compact, toNumber } from './signals';
 
 /**
@@ -27,6 +34,14 @@ export interface ResearchInput {
   proposedSolution?: string;
   /** Which research experience is requesting the analysis (owner | prospect). */
   userType?: UserType;
+  /**
+   * V2B.1 — Owner-supplied first-party business economics (AOV, conversion
+   * rate, monthly buyers, repeat purchase rate). Already validated by the API
+   * layer via validateFirstPartyInput(); passes through untouched to the ACR
+   * calculator, whose existing resolution chains give OBS precedence over
+   * benchmarks. Absent fields fall through to the benchmark fallback chain.
+   */
+  firstPartyEconomics?: ValidatedFirstPartyInput;
 }
 
 export async function researchBusiness(
@@ -105,12 +120,30 @@ export async function researchBusiness(
       industrySignals,
       hasQuiz: website ? website.hasQuiz : null,
       solutionActivatesDataCollection: solutionClassification.activatesDataCollection,
+      // V2B.1: owner-supplied first-party economics flow straight into the
+      // calculator's existing OBS-precedence resolution chains. Nothing is
+      // derived, scaled or defaulted here (V2B.1 §7).
+      ...input.firstPartyEconomics,
     },
     aggregate.traffic,
     { userType, trafficSource }
   );
 
   const analysis = await analyzeBusiness({ ...aggregate, calculated });
+
+  // V2B.3 / V2C — the authoritative analytical state, derived ONCE here from
+  // the calculator's own output and the single-source classifier's dimension
+  // (`solutionClassification`, computed once above). The UI and export consume
+  // this instead of inferring state from display strings. No calculator logic
+  // or intervention-text matching is reproduced anywhere downstream.
+  const revenueState: RevenueState = deriveRevenueState(
+    calculated,
+    solutionClassification.dimension,
+  );
+  const revenueExplanation: RevenueExplanation | null =
+    revenueState === 'CALCULATED'
+      ? null
+      : buildRevenueExplanation(revenueState, calculated);
 
   // A source is only "complete" if we actually retrieved core signals.
   const hasAnyRealSignal =
@@ -125,7 +158,7 @@ export async function researchBusiness(
   // The calculator's risk-adjusted combined base scenario is the single
   // authoritative figure. `analysis.scenarios` (Gemini's interpretive
   // layer) is no longer the source of the workspace revenue value.
-  const potentialRevenueLift = formatPotentialRevenueLift(calculated);
+  const potentialRevenueLift = formatPotentialRevenueLift(calculated, revenueState);
   const revenueCalculation = buildRevenueCalculationTrail(calculated);
 
   return {
@@ -140,6 +173,8 @@ export async function researchBusiness(
     quiz,
     revenueOpportunity: potentialRevenueLift,
     revenueCalculation,
+    revenueState,
+    revenueExplanation,
     growthAssessment: `${analysis.growthScore} / 100`,
     rawSignals: captured,
     analysis,
@@ -150,16 +185,24 @@ export async function researchBusiness(
  * Compact Potential Revenue Lift display: risk-adjusted combined base
  * scenario from the deterministic calculator, e.g. "$8,420/mo".
  *
- * Zero-vs-unavailable semantics (typed, not string-matched):
- *   combined.base === null                          → unavailable (no pathway ran)
- *   combined.base = {low: 0, high: 0}               → "$0/mo" (a calculated zero)
- *   any positive figure                             → "$X/mo"
- * A legitimate calculated zero is never converted to "Unavailable", and
- * missing evidence is never presented as "$0/mo".
+ * V2B.3 state semantics (typed state from deriveRevenueState, not string
+ * matching):
+ *   CALCULATED + base = {low: 0, high: 0}  → "$0/mo" (a calculated TRUE ZERO —
+ *     never converted to Unavailable)
+ *   CALCULATED + positive                  → "$X/mo"
+ *   INSUFFICIENT_DATA (pathway exists,
+ *     evidence insufficient)               → "Unavailable"
+ *   NOT_SUPPORTED (no validated pathway)   → "Not currently supported"
+ * The analytical state itself is carried separately in `revenueState`.
  */
-function formatPotentialRevenueLift(calculated: CalculatedMetrics): string {
+function formatPotentialRevenueLift(
+  calculated: CalculatedMetrics,
+  state: RevenueState,
+): string {
   const base = calculated.combined.base;
-  if (base === null) return 'Unavailable';
+  if (base === null) {
+    return state === 'NOT_SUPPORTED' ? 'Not currently supported' : 'Unavailable';
+  }
   return `$${base.low.toLocaleString('en-US')}/mo`;
 }
 

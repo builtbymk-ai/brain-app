@@ -359,7 +359,7 @@ function validateAndNormalize(
         .map(String)
         .map((s) => s.trim())
         .filter(Boolean)
-        .slice(0, 4)
+        .slice(0, 3)
         .map((s) => s.slice(0, 300));
     }
     // Prospect-only fields are discarded in owner mode

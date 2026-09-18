@@ -6,6 +6,7 @@
  * [DRV] Derived      — computed from observed/benchmark data
  */
 export type EvidenceTag = 'OBS' | 'BMK' | 'ASM' | 'DRV';
+import { RevenueExplanation, RevenueState } from './revenue-state';
 
 export type UserType = 'owner' | 'prospect';
 
@@ -44,6 +45,17 @@ export interface BusinessResult {
   revenueOpportunity: string;
   /** Concise evidence-tagged calculation trail for the Revenue Calculation column. */
   revenueCalculation?: string;
+  /**
+   * V2B.3 — authoritative analytical state (CALCULATED includes true zero).
+   * Derived once in the engine from calculator output; the UI and export
+   * MUST consume this instead of inferring state from strings.
+   */
+  revenueState: RevenueState;
+  /**
+   * V2B.3 — user-facing explanation for non-calculated states (null when
+   * CALCULATED, where the calculation trail is shown instead).
+   */
+  revenueExplanation: RevenueExplanation | null;
   growthAssessment: string;
   rawSignals: CapturedSignals;
   analysis: AnalysisResult | null;

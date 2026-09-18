@@ -1,13 +1,14 @@
-import {
-  BENCHMARK_LIBRARY,
-  MODEL_RULES,
-} from './benchmark-bundle.generated';
 import { UserType } from './types';
 import { AnalysisResult, Scenario } from '../research/types';
-import { getModeDefinition } from './modes';
 import { toNumber } from '../research/signals';
 import type { CalculatedMetrics } from './types';
 import { runOpenRouterAnalysis } from './openrouter';
+import {
+  BRAIN_BENCHMARK_SUMMARY,
+  buildGeminiPrompt,
+  buildGeminiUserMessage,
+  PromptContext,
+} from './prompts';
 
 /**
  * Model chain (verified live against the configured key):
@@ -40,92 +41,6 @@ export interface AggregateInput {
 }
 
 // ---------------------------------------------------------------------------
-// Benchmark extraction from the bundled library
-// ---------------------------------------------------------------------------
-
-/**
- * Extract a single benchmark record INCLUDING its full metadata block
- * (source, dataset, caution, status). Extraction stops at the next
- * BENCHMARK/SECTION/SOURCE marker so no metadata is lost.
- */
-function extractRecord(full: string, startMarker: string): string {
-  const idx = full.indexOf(startMarker);
-  if (idx === -1) return '';
-  const rest = full.slice(idx + startMarker.length);
-  const nextBench = rest.search(/\nBENCHMARK \d|\nSECTION \d|\nSOURCE \d|\nEND OF/);
-  const endIdx = nextBench === -1 ? rest.length : nextBench;
-  return (startMarker.startsWith('BENCHMARK') ? '' : startMarker.slice(0, 0)) + rest.slice(0, endIdx).trim();
-}
-
-function extractSection(full: string, startMarker: string, endMarker: string): string {
-  const startIdx = full.indexOf(startMarker);
-  if (startIdx === -1) return '';
-  const endIdx = full.indexOf(endMarker, startIdx + startMarker.length);
-  return endIdx !== -1 ? full.slice(startIdx, endIdx).trim() : full.slice(startIdx).trim();
-}
-
-function bench(id: number): string {
-  const marker = `BENCHMARK ${String(id).padStart(3, '0')}`;
-  return extractRecord(BENCHMARK_LIBRARY, marker);
-}
-
-function rulesSection(startMarker: string, endMarker: string): string {
-  return extractSection(MODEL_RULES, startMarker, endMarker);
-}
-
-/**
- * The V1 benchmark subset injected into the Gemini prompt. Each record
- * carries its full metadata: metric, value, source, dataset, period,
- * sample size, evidence type, caution, and status — so Gemini can judge
- * applicability rather than seeing a bare number.
- */
-export function getV1BenchmarkSubset(): string {
-  const sections: string[] = [];
-
-  sections.push('--- METHOD / EVIDENCE RULES (BRAIN MODEL RULES) ---');
-  sections.push(rulesSection('SECTION M1', 'SECTION M3'));
-  sections.push(rulesSection('SECTION M2', 'SECTION M3'));
-  sections.push(rulesSection('SECTION M3', 'SECTION M5'));
-
-  sections.push('--- BENCHMARK RECORDS (V1 CORE — WITH FULL METADATA) ---');
-
-  // Conversion benchmarks (001–014)
-  for (let i = 1; i <= 14; i++) sections.push(bench(i));
-
-  // Retention (015–019)
-  for (let i = 15; i <= 19; i++) sections.push(bench(i));
-
-  // Email (022–031)
-  for (let i = 22; i <= 31; i++) sections.push(bench(i));
-
-  // SMS (032–038)
-  for (let i = 32; i <= 38; i++) sections.push(bench(i));
-
-  // AOV (039–048)
-  for (let i = 39; i <= 48; i++) sections.push(bench(i));
-
-  // Paid acquisition (049–055)
-  for (let i = 49; i <= 55; i++) sections.push(bench(i));
-
-  // Digital experience (056–059)
-  for (let i = 56; i <= 59; i++) sections.push(bench(i));
-
-  // Support (060–069)
-  for (let i = 60; i <= 69; i++) sections.push(bench(i));
-
-  // Quiz (070–074) + quiz-to-purchase (075, UNVERIFIED) + 90-day RPR (076, UNVERIFIED)
-  for (let i = 70; i <= 76; i++) sections.push(bench(i));
-
-  // Subscription (079–080) + reviews (082–084) + CLV formulas (090–096)
-  for (const i of [79, 80, 82, 83, 84, 90, 91, 92, 93, 94, 95, 96]) sections.push(bench(i));
-
-  // Selection algorithm + guardrails from the benchmark directory
-  sections.push(extractSection(BENCHMARK_LIBRARY, 'SECTION 25', 'SECTION 27'));
-
-  return sections.filter(Boolean).join('\n\n');
-}
-
-// ---------------------------------------------------------------------------
 // Gemini analysis layer
 // ---------------------------------------------------------------------------
 
@@ -147,13 +62,17 @@ async function runGeminiAnalysis(input: AggregateInput): Promise<AnalysisResult 
     return null;
   }
 
-  const prompt = buildPrompt(input);
+  // Modular prompt architecture: system prompt (shared + mode module +
+  // authoritative CALCULATED_METRICS + curated benchmark library) and a
+  // per-business user message. CalculatedMetrics must already be fully
+  // assembled by calculator.ts BEFORE this call — it is embedded verbatim.
+  const { systemPrompt, userMessage } = buildAnalysisPrompt(input);
 
   // Failover across the allowed model chain: a 404/503/timeout on one model
   // falls through to the next rather than dropping to deterministic output.
   for (const model of GEMINI_MODELS) {
     try {
-      const text = await callGeminiModel(model, prompt, key);
+      const text = await callGeminiModel(model, systemPrompt, userMessage, key);
       if (!text) continue;
       const parsed = parseGeminiJson(text, input.userType);
       if (parsed) {
@@ -170,8 +89,12 @@ async function runGeminiAnalysis(input: AggregateInput): Promise<AnalysisResult 
   console.warn('BRAIN Gemini analysis: all Gemini models failed, trying OpenRouter secondary provider');
 
   // --- OpenRouter secondary fallback ---
-  // Only reached when ALL Gemini models fail.
-  const openrouterResult = await runOpenRouterAnalysis(prompt, input.userType);
+  // Only reached when ALL Gemini models fail. OpenRouter's interface takes a
+  // single prompt: pass the composed system + user message.
+  const openrouterResult = await runOpenRouterAnalysis(
+    `${systemPrompt}\n\n---\n\n${userMessage}`,
+    input.userType,
+  );
   if (openrouterResult) {
     return openrouterResult.result;
   }
@@ -180,7 +103,12 @@ async function runGeminiAnalysis(input: AggregateInput): Promise<AnalysisResult 
   return null;
 }
 
-async function callGeminiModel(model: string, prompt: string, key: string): Promise<string | null> {
+async function callGeminiModel(
+  model: string,
+  systemPrompt: string,
+  userMessage: string,
+  key: string,
+): Promise<string | null> {
   const response = await fetch(`${GEMINI_API_BASE}/${model}:generateContent`, {
     method: 'POST',
     headers: {
@@ -188,15 +116,14 @@ async function callGeminiModel(model: string, prompt: string, key: string): Prom
       'x-goog-api-key': key,
     },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      // Mode shapes interpretation, not computation: the prompt header and
-      // interpretation block come from the mode registry.
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: 'user', parts: [{ text: userMessage }] }],
       generationConfig: {
         temperature: 0.4,
         responseMimeType: 'application/json',
       },
     }),
-    // Large structured prompt (≈7K tokens with benchmark subset) can take
+    // Large structured prompt (curated benchmark summary + metrics) can take
     // 30s+ on Flash models with thinking enabled — 90s prevents flaky
     // timeouts; the deterministic fallback still catches true failures.
     signal: AbortSignal.timeout(90_000),
@@ -215,140 +142,95 @@ async function callGeminiModel(model: string, prompt: string, key: string): Prom
   return text ?? null;
 }
 
-function formatMoney(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 10_000) return `$${(n / 1_000).toFixed(1)}K`;
-  return `$${n.toLocaleString()}`;
+/**
+ * INSUFFICIENT_DATA metrics skeleton used when the calculator output is
+ * absent (e.g. a research run returned no calculator result). Every field
+ * is null/INSUFFICIENT_DATA so the prompt layer can never imply numbers
+ * exist — this state is preserved, never estimated around.
+ */
+function emptyMetrics(domain: string): CalculatedMetrics {
+  void domain;
+  const insufficient = {
+    value: null,
+    basis: 'INSUFFICIENT_DATA' as const,
+    provenance: 'Not established — INSUFFICIENT_DATA.',
+  };
+  return {
+    sufficiency: {
+      status: 'INSUFFICIENT_DATA',
+      missingInputs: ['calculator output unavailable for this research run'],
+      limitations: ['No ACR calculator result was produced; all revenue paths are unavailable.'],
+    },
+    inputs: {
+      traffic: { ...insufficient, provenance: 'Traffic not established for this run.' },
+      aov: { ...insufficient, provenance: 'AOV not established for this run.' },
+      conversionRate: insufficient,
+      quizParticipation: insufficient,
+      quizCompletion: insufficient,
+      quizToPurchase: insufficient,
+      repeatPurchaseRate: insufficient,
+      benchmarkHighRpr: insufficient,
+      productLifespanDays: insufficient,
+      automationMaturity: 'none',
+      industry: 'generic',
+      industryBasis: 'Unclassified — no calculator industry resolution available.',
+      replenishmentWindow: 'Unknown',
+      collectionActivation: 'none',
+    },
+    conversion: emptyPathScenarios(),
+    retention: emptyPathScenarios(),
+    combined: { conservative: null, base: null, upside: null },
+    opportunity: { conversion: null, retention: null, primary: null },
+    revenueProtection: {
+      supportContactRate: insufficient,
+      note: 'Not calculated — no calculator output available.',
+    },
+    assumptions: [],
+    benchmarksApplied: [],
+    evidenceLedger: [],
+    formulasApplied: [],
+    dataLimitations: ['No calculator output for this research run.'],
+  };
+}
+
+function emptyPathScenarios(): CalculatedMetrics['conversion'] {
+  const s = {
+    incrementalUnits: null,
+    rawRevenueLift: null,
+    effectiveRealization: 0,
+    realizedRevenueLift: null,
+    basis: 'INSUFFICIENT_DATA' as const,
+  };
+  return { conservative: { ...s }, base: { ...s }, upside: { ...s } };
 }
 
 /**
- * Serialize the calculator's authoritative numbers for the prompt. These are
- * the ONLY revenue figures Gemini may present — it interprets them; it never
- * performs arithmetic.
+ * Build the analysis prompt via the modular prompt architecture:
+ * system prompt (shared + owner/prospect module + authoritative
+ * CALCULATED_METRICS + curated benchmark library) and the per-business
+ * user message. CalculatedMetrics must already be assembled by
+ * calculator.ts before this runs — it is embedded verbatim; nothing here
+ * computes.
  */
-function formatCalculated(calculated: CalculatedMetrics | null | undefined): string {
-  if (!calculated) return 'Not available — interpret qualitatively and mark revenue scenarios INSUFFICIENT_DATA.';
-
-  const c = calculated;
-  const lines: string[] = [];
-  lines.push(`Data sufficiency: ${c.sufficiency.status}${c.sufficiency.missingInputs.length ? ` — missing: ${c.sufficiency.missingInputs.join('; ')}` : ''}`);
-  lines.push(`Industry classification: ${c.inputs.industry} (${c.inputs.industryBasis})`);
-  lines.push(`Traffic basis: [${c.inputs.traffic.basis}] ${c.inputs.traffic.provenance}`);
-  lines.push(`AOV basis: [${c.inputs.aov.basis}] ${c.inputs.aov.provenance}`);
-
-  const path = (name: string, p: CalculatedMetrics['conversion']) => {
-    const rows: string[] = [];
-    for (const key of ['conservative', 'base', 'upside'] as const) {
-      const s = p[key];
-      rows.push(
-        `  ${key}: units=${s.incrementalUnits ?? 'INSUFFICIENT_DATA'}, rawLift=${s.rawRevenueLift ?? 'INSUFFICIENT_DATA'}, realization=${s.effectiveRealization}, realizedLift=${s.realizedRevenueLift ?? 'INSUFFICIENT_DATA'} [${s.basis}]`
-      );
-    }
-    lines.push(`${name}:`);
-    lines.push(...rows);
+function buildAnalysisPrompt(input: AggregateInput): { systemPrompt: string; userMessage: string } {
+  const metrics = input.calculated ?? emptyMetrics(input.domain);
+  const context: PromptContext = {
+    userType: input.userType,
+    proposedSolution: input.proposedSolution,
+    remark: input.remark,
+    domain: input.domain,
+    brandName: input.brandName,
+    traffic: input.traffic,
+    products: input.products,
+    reviews: input.reviews,
+    followerEstimate: input.followerEstimate,
+    employeeCount: input.employeeCount,
+    hasQuiz: input.hasQuiz,
   };
-
-  path('CONVERSION PATH (Glow Curator)', c.conversion);
-  path('RETENTION PATH (LTV System)', c.retention);
-
-  for (const key of ['conservative', 'base', 'upside'] as const) {
-    const cb = c.combined[key];
-    lines.push(`COMBINED ${key}: ${cb ? formatMoney(cb.low) : 'INSUFFICIENT_DATA'}`);
-  }
-
-  lines.push(`Workspace opportunity (base): conversion=${c.opportunity.conversion ?? 'INSUFFICIENT_DATA'}, retention=${c.opportunity.retention ?? 'INSUFFICIENT_DATA'}, primary=${c.opportunity.primary ?? 'none'}`);
-
-  if (c.assumptions.length) {
-    lines.push('Assumptions applied:');
-    for (const a of c.assumptions) lines.push(`  - ${a.key}: ${a.value} — ${a.note}`);
-  }
-  if (c.benchmarksApplied.length) {
-    lines.push('Benchmarks applied:');
-    for (const b of c.benchmarksApplied) lines.push(`  - ${b.id} ${b.metric} = ${b.value} (${b.source}, ${b.verification}) — used for: ${b.use}`);
-  }
-  if (c.evidenceLedger.length) {
-    lines.push('Evidence ledger (input → formula → output):');
-    for (const step of c.evidenceLedger) {
-      lines.push(`  - ${step.formula} | inputs: ${JSON.stringify(step.inputs)} | output: ${step.output} | ${step.evidence}`);
-    }
-  }
-  if (c.dataLimitations.length) {
-    lines.push('Data limitations:');
-    for (const l of c.dataLimitations) lines.push(`  - ${l}`);
-  }
-
-  return lines.join('\n');
-}
-
-function buildPrompt(input: AggregateInput): string {
-  const benchmarkSubset = getV1BenchmarkSubset();
-  const mode = getModeDefinition(input.userType);
-  const calculatedBlock = formatCalculated(input.calculated);
-
-  return `You are BRAIN's analysis layer. Produce a structured opportunity assessment for the business below.
-
---- REQUEST MODE ---
-${mode.promptHeader}
-${mode.interpretation}
-
---- BUSINESS SIGNALS ---
-Business domain: ${input.domain}
-${input.brandName ? `Brand name (user-supplied): ${input.brandName}` : ''}
-Estimated monthly visits: ${input.traffic ?? 'INSUFFICIENT_DATA'}
-Product/storefront markers found: ${input.products ?? 'Not found'}
-Reviews found: ${input.reviews ?? 'Not found'}
-Combined social followers: ${input.followerEstimate ?? 'Not found'}
-Estimated employees: ${input.employeeCount ?? 'Not found'}
-Quiz/interactive element present: ${input.hasQuiz === null ? 'Not found' : input.hasQuiz ? 'yes' : 'no'}
-${input.remark ? `Analysis remark: ${input.remark}` : ''}
-
---- ACR CALCULATOR OUTPUT (AUTHORITATIVE — INTERPRET, DO NOT RECOMPUTE) ---
-${calculatedBlock}
-${input.proposedSolution ? `
---- PROPOSED SOLUTION TO ASSESS (user-supplied) ---
-"${input.proposedSolution}"
-
-ASSESSMENT TASK: Evaluate whether the evidence above supports, partially supports, or does not support this proposed solution. Reference specific observed signals and benchmarks. If the evidence is insufficient to assess the solution, say exactly what data would be needed. Do NOT endorse a solution the evidence does not support — label this [DRV] with the evidence basis, or INSUFFICIENT_DATA where applicable.` : ''}
-
-${benchmarkSubset}
-
---- ANALYSIS RULES (BINDING) ---
-1. Evidence tags: [OBS] observed data, [BMK] benchmark, [ASM] assumption, [DRV] derived. Tag every claim.
-2. MISSING INPUTS: If a value is "Not found" or "INSUFFICIENT_DATA", treat it as unknown. Never substitute zero, a heuristic, or an invented number. Report what is missing and what would be needed.
-3. REVENUE SCENARIOS (CALCULATOR BINDING): The ACR Calculator Output above is the SINGLE SOURCE OF TRUTH for all revenue figures. Map its COMBINED conservative/base/upside values EXACTLY into the three scenarios' revenueLow/revenueHigh (revenueLow = revenueHigh = the calculator's risk-adjusted combined value; use 0/0 only when the calculator reports INSUFFICIENT_DATA). Do NOT recalculate traffic, buyers, quiz participants, quiz completions, quiz purchases, incremental purchases, RPR, additional repeat buyers, AOV multiplication, realization factors, maturity modifiers, risk buffers, or final revenue opportunity — recompute NOTHING. Cite in each description which calculator paths and benchmark IDs produced the number. If the calculator reports INSUFFICIENT_DATA for a path, the corresponding scenario must state INSUFFICIENT_DATA and the missing inputs.
-4. UNVERIFIED BENCHMARKS: Records marked "REQUIRES SOURCE VALIDATION", "STATUS: UNVERIFIED", or historical-only (e.g. BENCHMARK 075 quiz-to-purchase 8/12/18, BENCHMARK 076 90-day RPR 15/20/25) MUST NOT drive quantitative revenue calculations. They may be cited as context ONLY, explicitly labelled [ASM] with a note that the source is unvalidated.
-5. Benchmark SELECTION: choose the most applicable record per Section 25 (industry > business model > geography > date > denominator > definition). Never blend records from different sources into one number. Cite the benchmark ID(s) you used.
-6. Do NOT treat the benchmark maximum as a target. Do NOT treat the full gap as recoverable. Apply the model rules (realization factors, risk buffers, maturity modifier).
-7. If observed performance is already at or above the relevant benchmark, do NOT manufacture a conversion opportunity — shift to retention, AOV, acquisition efficiency, support, CX.
-8. Use cautious revenue language: "Estimated incremental revenue opportunity", "Benchmark-based opportunity", "Directional". Never "guaranteed" or "you will make".
-9. PROPOSED SOLUTION (when provided): assess fit between the user's proposed solution and the observed evidence. A supported solution goes in "opportunities" with [DRV] + evidence; an unsupported or unevaluatable solution goes in "bottlenecks" with what data would justify it. Never invent evidence to validate a solution.
-
-Return strict JSON with exactly this shape:
-{
-  "solutionFit": "${input.userType === 'prospect' ? 'Supported | Partially supported | Not supported by current evidence | INSUFFICIENT_DATA' : 'not-applicable'} — solution–evidence verdict citing signals and benchmark IDs",
-  "scenarios": [
-    { "label": "Conservative", "description": "string — cite benchmark IDs used and state realization/buffer applied; if INSUFFICIENT_DATA say so", "revenueLow": number, "revenueHigh": number },
-    { "label": "Base", "description": "same requirements", "revenueLow": number, "revenueHigh": number },
-    { "label": "Aggressive", "description": "same requirements", "revenueLow": number, "revenueHigh": number }
-  ],
-  "growthScore": number,
-  "bottlenecks": ["string with [tag], benchmark ID reference, and what is missing if applicable"],
-  "opportunities": ["string with [tag], benchmark ID reference"],
-  "confidence": "low" | "medium" | "high",
-  "summary": "string — state evidence basis and any INSUFFICIENT_DATA conditions",${
-    input.userType === 'owner'
-      ? `
-  "solutionImpact": "1-2 sentences — the business CONSEQUENCE of addressing the primary opportunity: connect the specific evidence → the operating constraint it reveals → what changes for the business if it is addressed. Cite benchmark IDs where used. If the opportunity is INSUFFICIENT_DATA, state what decision the missing data is blocking instead.",
-  "priorityChanges": ["2-4 items, ordered most-important-first. Each item names ONE specific change or investigation tied to cited evidence ([OBS]/[BMK]/[ASM]) and why it comes at its position. Generic advice (\"improve marketing\", \"optimize your website\") is forbidden."]`
-      : `
-  "solutionImpact": "1-2 sentences — the business CONSEQUENCE for the prospect of addressing the primary opportunity: connect the specific evidence → the operating constraint it reveals → what changes if it is addressed. Cite benchmark IDs where used. If the opportunity is INSUFFICIENT_DATA, state what a discovery call must establish instead.",
-  "angleOfPitch": "1-2 sentences — connect the proposed solution directly to this prospect's observed evidence and benchmark context: which specific signal makes the solution relevant (or what must be validated first if evidence is insufficient). Never pitch beyond the evidence; if the solution is unsupported, the angle is the discovery question, not the sale."
-  `
-  }
-}
-Growth score is 0-100. Revenue ranges are USD estimates, never guarantees. solutionImpact, ${
-    input.userType === 'owner' ? 'priorityChanges' : 'angleOfPitch'
-  } are premium intelligence: they must connect specific evidence → constraint → implication, and must never be generic.`;
+  return {
+    systemPrompt: buildGeminiPrompt(metrics, BRAIN_BENCHMARK_SUMMARY, context),
+    userMessage: buildGeminiUserMessage(context),
+  };
 }
 
 function parseGeminiJson(text: string, userType: UserType): AnalysisResult | null {
@@ -400,7 +282,7 @@ function parseGeminiJson(text: string, userType: UserType): AnalysisResult | nul
       : null;
   const priorityChanges =
     userType === 'owner' && Array.isArray(obj.priorityChanges)
-      ? obj.priorityChanges.map(String).map((s) => s.trim()).filter(Boolean).slice(0, 4).map((s) => s.slice(0, 300))
+      ? obj.priorityChanges.map(String).map((s) => s.trim()).filter(Boolean).slice(0, 3).map((s) => s.slice(0, 300))
       : null;
   const angleOfPitch =
     userType === 'prospect' && typeof obj.angleOfPitch === 'string' && obj.angleOfPitch.trim().length > 0

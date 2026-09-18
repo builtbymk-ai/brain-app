@@ -39,6 +39,12 @@ export const businesses = pgTable(
     reviews: text('reviews'),
     quiz: text('quiz'),
     revenueOpportunity: text('revenue_opportunity'),
+    /** V2B.3 authoritative revenue state: CALCULATED | INSUFFICIENT_DATA | NOT_SUPPORTED. */
+    revenueState: text('revenue_state'),
+    /** V2B.3 structured user-facing explanation for non-calculated states. */
+    revenueExplanation: jsonb('revenue_explanation'),
+    /** Concise evidence-tagged calculation trail / structured limitation. */
+    revenueCalculation: text('revenue_calculation'),
     growthAssessment: text('growth_assessment'),
     /** Raw captured signals with evidence classification. */
     rawSignals: jsonb('raw_signals'),
